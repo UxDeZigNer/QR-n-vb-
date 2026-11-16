@@ -1,41 +1,60 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { supabase } from '../lib/supabase'
-import type { Branch, Operator, Service } from '../lib/types'
+import { subscribeBranch } from '../lib/queue'
+import type { Branch, BranchLive, Operator, Service, Ticket } from '../lib/types'
 
 const APP_URL = import.meta.env.VITE_APP_URL ?? window.location.origin + import.meta.env.BASE_URL
 
-function queueUrl(slug: string) {
-  return `${APP_URL}#/q/${slug}`
-}
-function panelUrl(slug: string) {
-  return `${APP_URL}#/panel/${slug}`
-}
+const queueUrl = (slug: string) => `${APP_URL}#/q/${slug}`
+const panelUrl = (slug: string) => `${APP_URL}#/panel/${slug}`
+const displayUrl = (slug: string) => `${APP_URL}#/display/${slug}`
 
 export default function Dashboard() {
   const [ready, setReady] = useState(false)
-  const [authed, setAuthed] = useState(false)
-  const [orgId, setOrgId] = useState<string | null>(null)
   const [branches, setBranches] = useState<Branch[]>([])
   const [selected, setSelected] = useState<Branch | null>(null)
+
+  // Filiala bağlı məlumatlar
+  const [live, setLive] = useState<BranchLive | null>(null)
   const [services, setServices] = useState<Service[]>([])
   const [operators, setOperators] = useState<Operator[]>([])
+  const [recent, setRecent] = useState<Ticket[]>([])
+  const [todayCount, setTodayCount] = useState(0)
+  const [avgWait, setAvgWait] = useState(0)
+  const [qrDataUrl, setQrDataUrl] = useState('')
+
+  // Formalar
   const [newBranch, setNewBranch] = useState('')
   const [newService, setNewService] = useState('')
-  const [qrDataUrl, setQrDataUrl] = useState('')
+  const [newServiceMin, setNewServiceMin] = useState(5)
+  const [newOperator, setNewOperator] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
 
-  // Sessiya yoxla
+  const flash = (m: string) => {
+    setMsg(m)
+    setTimeout(() => setMsg(null), 2500)
+  }
+
+  // ---- Filialların yüklənməsi ----
+  const loadBranches = useCallback(async (org: string) => {
+    const { data } = await supabase
+      .from('branches')
+      .select('*')
+      .eq('org_id', org)
+      .order('created_at')
+    setBranches((data ?? []) as Branch[])
+    return (data ?? []) as Branch[]
+  }, [])
+
   useEffect(() => {
     void supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) {
         window.location.hash = '/auth'
         return
       }
-      setAuthed(true)
       const uid = data.session.user.id
 
-      // Org varsa al, yoxsa yarat
       let { data: org } = await supabase.from('orgs').select('*').eq('owner_id', uid).maybeSingle()
       if (!org) {
         const { data: created } = await supabase
@@ -46,62 +65,125 @@ export default function Dashboard() {
         org = created
       }
       if (org) {
-        setOrgId(org.id)
-        await loadBranches(org.id)
+        const list = await loadBranches(org.id)
+        if (list.length > 0) void openBranch(list[0])
       }
       setReady(true)
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function loadBranches(org: string) {
-    const { data } = await supabase
-      .from('branches')
-      .select('*')
-      .eq('org_id', org)
-      .order('created_at')
-    setBranches((data ?? []) as Branch[])
-  }
+  // ---- Seçili filialın bütün məlumatları ----
+  const loadDetail = useCallback(async (b: Branch) => {
+    const startOfDay = new Date()
+    startOfDay.setHours(0, 0, 0, 0)
 
-  async function loadDetail(b: Branch) {
-    setSelected(b)
-    const [s, o] = await Promise.all([
+    const [liveRes, svcRes, opRes, recentRes, countRes] = await Promise.all([
+      supabase.from('branch_live').select('*').eq('branch_id', b.id).maybeSingle(),
       supabase.from('services').select('*').eq('branch_id', b.id).order('sort_order'),
-      supabase.from('operators').select('*').eq('branch_id', b.id),
+      supabase.from('operators').select('*').eq('branch_id', b.id).order('name'),
+      supabase
+        .from('tickets')
+        .select('*')
+        .eq('branch_id', b.id)
+        .gte('joined_at', startOfDay.toISOString())
+        .order('seq', { ascending: false })
+        .limit(15),
+      supabase
+        .from('tickets')
+        .select('joined_at, called_at, done_at', { count: 'exact', head: true })
+        .eq('branch_id', b.id)
+        .gte('joined_at', startOfDay.toISOString()),
     ])
-    setServices((s.data ?? []) as Service[])
-    setOperators((o.data ?? []) as Operator[])
-    const url = await QRCode.toDataURL(queueUrl(b.slug), { width: 600, margin: 2 })
-    setQrDataUrl(url)
-  }
 
+    setLive(liveRes.data as BranchLive | null)
+    setServices((svcRes.data ?? []) as Service[])
+    setOperators((opRes.data ?? []) as Operator[])
+    setRecent((recentRes.data ?? []) as Ticket[])
+    setTodayCount(countRes.count ?? 0)
+
+    // Orta gözləmə: joined -> called fərqi (çağırılmışlar üzərində)
+    const rows = (recentRes.data ?? []) as Ticket[]
+    const waits = rows
+      .filter((t) => t.called_at)
+      .map((t) => (new Date(t.called_at!).getTime() - new Date(t.joined_at).getTime()) / 60000)
+    setAvgWait(waits.length ? Math.round(waits.reduce((a, b2) => a + b2, 0) / waits.length) : 0)
+
+    QRCode.toDataURL(queueUrl(b.slug), { width: 600, margin: 2 })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(''))
+  }, [])
+
+  const openBranch = useCallback(
+    (b: Branch) => {
+      setSelected(b)
+      void loadDetail(b)
+    },
+    [loadDetail],
+  )
+
+  // ---- Real-time ----
+  useEffect(() => {
+    if (!selected) return
+    return subscribeBranch(selected.id, () => void loadDetail(selected))
+  }, [selected, loadDetail])
+
+  // ---- Əməliyyatlar ----
   async function createBranch() {
-    if (!orgId || !newBranch.trim()) return
-    const slug = `${newBranch.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${Math.random().toString(36).slice(2, 6)}`
+    if (!newBranch.trim()) return
+    const base = newBranch.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'filial'
+    const slug = `${base}-${Math.random().toString(36).slice(2, 6)}`
+    const { data: org } = await supabase.from('orgs').select('id').limit(1).maybeSingle()
+    if (!org) return flash('Təşkilat tapılmadı')
     const { data, error } = await supabase
       .from('branches')
-      .insert({ org_id: orgId, name: newBranch.trim(), slug, prefix: 'A' })
+      .insert({ org_id: org.id, name: newBranch.trim(), slug, prefix: 'A' })
       .select()
       .single()
-    if (error) return setMsg(error.message)
+    if (error) return flash(error.message)
     setNewBranch('')
-    await loadBranches(orgId)
-    await loadDetail(data as Branch)
-    setMsg('Filial yaradıldı ✓')
+    const list = await loadBranches(org.id)
+    setBranches(list)
+    openBranch(data as Branch)
+    flash('Filial yaradıldı ✓')
   }
 
   async function addService() {
     if (!selected || !newService.trim()) return
-    await supabase.from('services').insert({
+    const { error } = await supabase.from('services').insert({
       branch_id: selected.id,
       name: newService.trim(),
-      avg_minutes: 5,
+      avg_minutes: newServiceMin,
       sort_order: services.length,
     })
+    if (error) return flash(error.message)
     setNewService('')
     await loadDetail(selected)
+    flash('Xidmət əlavə olundu ✓')
   }
 
-  async function downloadQr() {
+  async function removeService(id: string) {
+    await supabase.from('services').delete().eq('id', id)
+    if (selected) await loadDetail(selected)
+  }
+
+  async function addOperator() {
+    if (!selected || !newOperator.trim()) return
+    const { error } = await supabase
+      .from('operators')
+      .insert({ branch_id: selected.id, name: newOperator.trim() })
+    if (error) return flash(error.message)
+    setNewOperator('')
+    await loadDetail(selected)
+    flash('Operator əlavə olundu ✓')
+  }
+
+  async function removeOperator(id: string) {
+    await supabase.from('operators').delete().eq('id', id)
+    if (selected) await loadDetail(selected)
+  }
+
+  function downloadQr() {
     if (!qrDataUrl || !selected) return
     const a = document.createElement('a')
     a.href = qrDataUrl
@@ -114,171 +196,374 @@ export default function Dashboard() {
     window.location.hash = '/'
   }
 
-  if (!ready || !authed) {
+  if (!ready) {
     return <div className="min-h-screen grid place-items-center text-slate-400">Yüklənir…</div>
   }
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+      {/* Başlıq */}
+      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-2 font-black text-lg">
           <span className="w-8 h-8 rounded-lg bg-brand-600 text-white grid place-items-center">Q</span>
           Növbə — İdarəetmə
         </div>
-        <button onClick={signOut} className="text-sm text-slate-500 hover:text-slate-700">
-          Çıxış
-        </button>
+        <div className="flex items-center gap-3">
+          {msg && <span className="text-sm text-emerald-600">{msg}</span>}
+          <button onClick={signOut} className="text-sm text-slate-500 hover:text-slate-700">
+            Çıxış
+          </button>
+        </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8 grid md:grid-cols-3 gap-6">
-        {/* Filiallar */}
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5">
-            <h2 className="font-bold text-slate-800 mb-3">Filiallar</h2>
+      <div className="max-w-6xl mx-auto px-6 py-6 grid md:grid-cols-[240px_1fr] gap-6">
+        {/* ---- Sol: filial siyahısı ---- */}
+        <aside className="space-y-3">
+          <div className="bg-white rounded-2xl border border-slate-200 p-4">
+            <h2 className="font-bold text-slate-800 text-sm mb-3">Filiallar</h2>
             <div className="flex gap-2">
               <input
                 value={newBranch}
                 onChange={(e) => setNewBranch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && createBranch()}
-                placeholder="Yeni filial adı"
-                className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
+                placeholder="Yeni filial"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
               />
               <button
                 onClick={createBranch}
-                className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700"
+                className="shrink-0 rounded-xl bg-brand-600 text-white w-10 font-bold hover:bg-brand-700"
+                title="Filial yarat"
               >
                 +
               </button>
             </div>
-            <div className="mt-4 space-y-2">
+
+            <div className="mt-3 space-y-1.5">
               {branches.map((b) => (
                 <button
                   key={b.id}
-                  onClick={() => loadDetail(b)}
-                  className={`w-full text-left rounded-xl border px-3 py-2.5 text-sm transition ${
+                  onClick={() => openBranch(b)}
+                  className={`w-full text-left rounded-xl px-3 py-2.5 text-sm transition ${
                     selected?.id === b.id
-                      ? 'border-brand-600 bg-brand-50'
-                      : 'border-slate-200 hover:border-slate-300'
+                      ? 'bg-brand-600 text-white'
+                      : 'hover:bg-slate-100 text-slate-700'
                   }`}
                 >
-                  <div className="font-semibold text-slate-800">{b.name}</div>
-                  <div className="text-xs text-slate-400">/q/{b.slug}</div>
+                  <div className="font-semibold flex items-center justify-between">
+                    {b.name}
+                    {selected?.id === b.id && live && (
+                      <span className="text-xs bg-white/20 rounded-full px-2 py-0.5">
+                        {live.waiting_count}
+                      </span>
+                    )}
+                  </div>
+                  <div className={`text-xs ${selected?.id === b.id ? 'text-white/70' : 'text-slate-400'}`}>
+                    /q/{b.slug}
+                  </div>
                 </button>
               ))}
               {branches.length === 0 && (
-                <div className="text-xs text-slate-400 text-center py-4">
-                  İlk filialınızı yaradın
-                </div>
+                <div className="text-xs text-slate-400 text-center py-4">İlk filialınızı yaradın</div>
               )}
             </div>
           </div>
+        </aside>
 
-          {msg && <div className="text-sm text-emerald-600">{msg}</div>}
-        </div>
-
-        {/* Təfərrüat */}
-        <div className="md:col-span-2 space-y-4">
+        {/* ---- Sağ: seçili filialın dashboard-u ---- */}
+        <main className="space-y-4">
           {!selected ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center text-slate-400">
+            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-400">
               Filial seçin →
             </div>
           ) : (
             <>
-              {/* QR */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col md:flex-row gap-6 items-center">
-                <div className="w-48 h-48 rounded-xl border border-slate-100 p-2 bg-white shrink-0 grid place-items-center">
-                  {qrDataUrl ? (
-                    <img src={qrDataUrl} alt="QR" className="w-full h-full" />
-                  ) : (
-                    <span className="text-slate-300">QR…</span>
-                  )}
+              {/* Başlıq + canlı status */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-xl font-black text-slate-800">{selected.name}</h1>
+                  <div className="text-sm text-slate-400">/{selected.slug} · prefiks {selected.prefix}</div>
                 </div>
-                <div className="text-center md:text-left">
-                  <h2 className="font-bold text-slate-800 text-lg">{selected.name}</h2>
-                  <p className="text-sm text-slate-500 mt-1">
-                    Ziyarətçi QR-u skan edir → <code className="bg-slate-100 px-1 rounded">nömrə alır</code>
-                  </p>
-                  <div className="mt-3 space-y-1 text-xs text-slate-500 break-all">
-                    <div>QR linki: {queueUrl(selected.slug)}</div>
-                    <div>Panel: {panelUrl(selected.slug)}</div>
-                    <div>Ekran: {`${APP_URL}#/display/${selected.slug}`}</div>
-                  </div>
-                  <div className="mt-4 flex gap-2 justify-center md:justify-start">
-                    <button
-                      onClick={downloadQr}
-                      className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700"
-                    >
-                      ⬇ QR yüklə (PNG)
-                    </button>
-                    <a
-                      href={`#/display/${selected.slug}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold hover:bg-slate-50"
-                    >
-                      🖥 Ekran
-                    </a>
-                    <a
-                      href={`#/panel/${selected.slug}`}
-                      className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold hover:bg-slate-50"
-                    >
-                      ⚙ Panel
-                    </a>
-                  </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 rounded-full px-3 py-1.5 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Canlı
+                  </span>
+                  <span className="bg-slate-100 text-slate-600 rounded-full px-3 py-1.5">
+                    {live?.waiting_count ?? 0} gözləyir
+                  </span>
                 </div>
               </div>
 
-              {/* Xidmətlər */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-5">
-                <h3 className="font-bold text-slate-800 mb-3">Xidmətlər</h3>
-                <div className="flex gap-2">
-                  <input
-                    value={newService}
-                    onChange={(e) => setNewService(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && addService()}
-                    placeholder="Məs. Kassir, Həkim, Mütəxəssis"
-                    className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
-                  />
+              {/* Statistika kartları */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <Stat
+                  label="Hazırda çağırılan"
+                  value={live?.current_code ?? '—'}
+                  accent
+                />
+                <Stat label="Gözləyən" value={`${live?.waiting_count ?? 0} nəfər`} />
+                <Stat label="Bugünkü ziyarət" value={`${todayCount}`} />
+                <Stat label="Orta gözləmə" value={avgWait ? `${avgWait} dəq` : '—'} />
+              </div>
+
+              {/* Sürətli keçidlər */}
+              <div className="grid sm:grid-cols-3 gap-3">
+                <QuickLink
+                  href={panelUrl(selected.slug)}
+                  icon="⚙"
+                  title="Operator paneli"
+                  desc="Növbəti / Geri çağır"
+                />
+                <QuickLink
+                  href={displayUrl(selected.slug)}
+                  icon="🖥"
+                  title="Gözləmə zalı ekranı"
+                  desc="TV / monitor üçün"
+                  external
+                />
+                <button
+                  onClick={downloadQr}
+                  className="rounded-2xl border border-slate-200 bg-white p-4 text-left hover:border-brand-400 transition"
+                >
+                  <div className="text-2xl">⬇</div>
+                  <div className="font-semibold text-slate-800 text-sm mt-1">QR yüklə</div>
+                  <div className="text-xs text-slate-400">PNG, çap üçün hazır</div>
+                </button>
+              </div>
+
+              {/* QR + xidmət/ziyarətçi linkləri */}
+              <div className="grid lg:grid-cols-[280px_1fr] gap-4">
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col items-center">
+                  <div className="w-44 h-44 rounded-xl border border-slate-100 p-2 grid place-items-center">
+                    {qrDataUrl ? (
+                      <img src={qrDataUrl} alt="QR" className="w-full h-full" />
+                    ) : (
+                      <span className="text-slate-300 text-sm">QR yaranır…</span>
+                    )}
+                  </div>
+                  <div className="text-sm font-semibold text-slate-700 mt-3">Ziyarətçi QR kodu</div>
+                  <div className="text-xs text-slate-400 text-center mt-1">
+                    Skan → nömrə → real-time izləmə
+                  </div>
                   <button
-                    onClick={addService}
-                    className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700"
+                    onClick={downloadQr}
+                    className="mt-3 w-full rounded-xl bg-brand-600 text-white py-2 text-sm font-semibold hover:bg-brand-700"
                   >
-                    +
+                    PNG yüklə
                   </button>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {services.map((s) => (
-                    <span
-                      key={s.id}
-                      className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600"
+
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
+                  <h3 className="font-bold text-slate-800 text-sm">Linklər</h3>
+                  <LinkRow label="Ziyarətçi səhifəsi" value={queueUrl(selected.slug)} />
+                  <LinkRow label="Operator paneli" value={panelUrl(selected.slug)} />
+                  <LinkRow label="Gözləmə ekranı" value={displayUrl(selected.slug)} />
+
+                  <h3 className="font-bold text-slate-800 text-sm pt-2">Xidmətlər</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {services.map((s) => (
+                      <span
+                        key={s.id}
+                        className="group inline-flex items-center gap-1.5 rounded-full bg-slate-100 pl-3 pr-2 py-1 text-sm text-slate-600"
+                      >
+                        {s.name}
+                        <span className="text-slate-400 text-xs">~{s.avg_minutes}d</span>
+                        <button
+                          onClick={() => removeService(s.id)}
+                          className="text-slate-400 hover:text-red-600 text-xs"
+                          title="Sil"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                    {services.length === 0 && (
+                      <span className="text-xs text-slate-400">
+                        Yoxdur — ziyarətçi sadəcə nömrə alacaq
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      value={newService}
+                      onChange={(e) => setNewService(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && addService()}
+                      placeholder="Məs. Kassir, Həkim"
+                      className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      max={120}
+                      value={newServiceMin}
+                      onChange={(e) => setNewServiceMin(Number(e.target.value))}
+                      className="w-20 rounded-xl border border-slate-200 px-2 py-2 text-sm outline-none focus:border-brand-500"
+                      title="Orta dəqiqə"
+                    />
+                    <button
+                      onClick={addService}
+                      className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700"
                     >
-                      {s.name} <span className="text-slate-400">~{s.avg_minutes}d</span>
-                    </span>
-                  ))}
-                  {services.length === 0 && (
-                    <span className="text-xs text-slate-400">Hələ xidmət yoxdur — ziyarətçi sadəcə nömrə alacaq</span>
-                  )}
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* Operatorlar */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-5">
-                <h3 className="font-bold text-slate-800 mb-3">Operatorlar</h3>
-                <div className="flex flex-wrap gap-2">
-                  {operators.map((o) => (
-                    <span key={o.id} className="rounded-full bg-brand-50 text-brand-700 px-3 py-1 text-sm">
-                      {o.name}
-                    </span>
-                  ))}
-                  {operators.length === 0 && (
-                    <span className="text-xs text-slate-400">Hələ operator əlavə olunmayıb</span>
-                  )}
+              {/* Operatorlar + son ziyarətlər */}
+              <div className="grid lg:grid-cols-2 gap-4">
+                <div className="bg-white rounded-2xl border border-slate-200 p-5">
+                  <h3 className="font-bold text-slate-800 text-sm mb-3">Operatorlar</h3>
+                  <div className="space-y-1.5">
+                    {operators.map((o) => (
+                      <div
+                        key={o.id}
+                        className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2"
+                      >
+                        <span className="text-sm text-slate-700">{o.name}</span>
+                        <button
+                          onClick={() => removeOperator(o.id)}
+                          className="text-slate-400 hover:text-red-600 text-xs"
+                        >
+                          sil
+                        </button>
+                      </div>
+                    ))}
+                    {operators.length === 0 && (
+                      <div className="text-xs text-slate-400">Hələ operator yoxdur</div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <input
+                      value={newOperator}
+                      onChange={(e) => setNewOperator(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && addOperator()}
+                      placeholder="Operator adı"
+                      className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
+                    />
+                    <button
+                      onClick={addOperator}
+                      className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-200 p-5">
+                  <h3 className="font-bold text-slate-800 text-sm mb-3">Bugünkü ziyarətlər</h3>
+                  <div className="space-y-1 max-h-64 overflow-auto">
+                    {recent.map((t) => (
+                      <div
+                        key={t.id}
+                        className="flex items-center justify-between text-sm px-2 py-1.5 rounded-lg hover:bg-slate-50"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-slate-700">{t.code}</span>
+                          {t.visitor_name && (
+                            <span className="text-slate-400 text-xs">{t.visitor_name}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <StatusBadge status={t.status} />
+                          <span className="text-xs text-slate-400 tabular-nums">
+                            {new Date(t.joined_at).toLocaleTimeString('az-AZ', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {recent.length === 0 && (
+                      <div className="text-xs text-slate-400 text-center py-6">
+                        Bu gün hələ ziyarət yoxdur
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </>
           )}
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   )
+}
+
+// ---- Kiçik komponentlər ----
+
+function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div
+      className={`rounded-2xl border p-4 ${
+        accent ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white border-slate-200'
+      }`}
+    >
+      <div className={`text-xs ${accent ? 'text-white/70' : 'text-slate-400'}`}>{label}</div>
+      <div
+        className={`text-2xl font-black tabular-nums mt-1 ${
+          accent ? 'text-white' : 'text-slate-800'
+        }`}
+      >
+        {value}
+      </div>
+    </div>
+  )
+}
+
+function QuickLink({
+  href,
+  icon,
+  title,
+  desc,
+  external,
+}: {
+  href: string
+  icon: string
+  title: string
+  desc: string
+  external?: boolean
+}) {
+  return (
+    <a
+      href={href}
+      target={external ? '_blank' : undefined}
+      rel={external ? 'noreferrer' : undefined}
+      className="rounded-2xl border border-slate-200 bg-white p-4 hover:border-brand-400 transition"
+    >
+      <div className="text-2xl">{icon}</div>
+      <div className="font-semibold text-slate-800 text-sm mt-1">{title}</div>
+      <div className="text-xs text-slate-400">{desc}</div>
+    </a>
+  )
+}
+
+function LinkRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <span className="text-slate-500 w-36 shrink-0">{label}</span>
+      <code className="flex-1 truncate bg-slate-50 rounded-lg px-2 py-1.5 text-xs text-slate-600">
+        {value}
+      </code>
+      <button
+        onClick={() => void navigator.clipboard.writeText(value)}
+        className="text-xs text-brand-600 hover:underline shrink-0"
+      >
+        kopyala
+      </button>
+    </div>
+  )
+}
+
+function StatusBadge({ status }: { status: Ticket['status'] }) {
+  const map: Record<Ticket['status'], { t: string; c: string }> = {
+    waiting: { t: 'gözləyir', c: 'bg-slate-100 text-slate-500' },
+    called: { t: 'çağırıldı', c: 'bg-amber-100 text-amber-700' },
+    serving: { t: 'xidmətdə', c: 'bg-blue-100 text-blue-700' },
+    done: { t: 'bitdi', c: 'bg-emerald-100 text-emerald-700' },
+    skipped: { t: 'buraxıldı', c: 'bg-red-100 text-red-600' },
+  }
+  const s = map[status]
+  return <span className={`text-xs rounded-full px-2 py-0.5 ${s.c}`}>{s.t}</span>
 }

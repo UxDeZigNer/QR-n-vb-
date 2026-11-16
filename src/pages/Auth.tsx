@@ -18,7 +18,12 @@ export default function Auth() {
     setMsg(null)
     try {
       if (mode === 'signup') {
-        const { error } = await supabase.auth.signUp({ email, password })
+        const redirect = `${window.location.origin}${import.meta.env.BASE_URL}#/dashboard`
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: redirect },
+        })
         if (error) throw error
         setMsg('Təsdiq linki e-poçtunuza göndərildi — linkə keçin və daxil olun.')
       } else {
