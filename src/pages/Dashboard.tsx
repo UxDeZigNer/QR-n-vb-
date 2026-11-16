@@ -203,74 +203,61 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Başlıq */}
-      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-2 font-black text-lg">
-          <span className="w-8 h-8 rounded-lg bg-brand-600 text-white grid place-items-center">Q</span>
-          Növbə — İdarəetmə
-        </div>
-        <div className="flex items-center gap-3">
-          {msg && <span className="text-sm text-emerald-600">{msg}</span>}
-          <button onClick={signOut} className="text-sm text-slate-500 hover:text-slate-700">
-            Çıxış
-          </button>
+      <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 font-black text-lg shrink-0">
+            <span className="w-8 h-8 rounded-lg bg-brand-600 text-white grid place-items-center">Q</span>
+            <span className="hidden sm:inline">Növbə</span>
+          </div>
+
+          {/* Filial seçimi */}
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <select
+              value={selected?.id ?? ''}
+              onChange={(e) => {
+                const b = branches.find((x) => x.id === e.target.value)
+                if (b) openBranch(b)
+              }}
+              className="min-w-0 max-w-[220px] flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-brand-500 bg-white cursor-pointer"
+            >
+              {branches.length === 0 && <option value="">Filial yoxdur</option>}
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name} {b.id === selected?.id && live ? `(${live.waiting_count})` : ''}
+                </option>
+              ))}
+            </select>
+
+            {/* Yeni filial */}
+            <input
+              value={newBranch}
+              onChange={(e) => setNewBranch(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && createBranch()}
+              placeholder="Yeni filial"
+              className="min-w-0 w-28 sm:w-40 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
+            />
+            <button
+              onClick={createBranch}
+              className="shrink-0 rounded-xl bg-brand-600 text-white w-10 h-10 font-bold hover:bg-brand-700"
+              title="Filial yarat"
+            >
+              +
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            {msg && <span className="text-sm text-emerald-600">{msg}</span>}
+            <button onClick={signOut} className="text-sm text-slate-500 hover:text-slate-700">
+              Çıxış
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-6 py-6 grid md:grid-cols-[240px_1fr] gap-6">
-        {/* ---- Sol: filial siyahısı ---- */}
-        <aside className="space-y-3">
-          <div className="bg-white rounded-2xl border border-slate-200 p-4">
-            <h2 className="font-bold text-slate-800 text-sm mb-3">Filiallar</h2>
-            <div className="flex gap-2">
-              <input
-                value={newBranch}
-                onChange={(e) => setNewBranch(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && createBranch()}
-                placeholder="Yeni filial"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
-              />
-              <button
-                onClick={createBranch}
-                className="shrink-0 rounded-xl bg-brand-600 text-white w-10 font-bold hover:bg-brand-700"
-                title="Filial yarat"
-              >
-                +
-              </button>
-            </div>
-
-            <div className="mt-3 space-y-1.5">
-              {branches.map((b) => (
-                <button
-                  key={b.id}
-                  onClick={() => openBranch(b)}
-                  className={`w-full text-left rounded-xl px-3 py-2.5 text-sm transition ${
-                    selected?.id === b.id
-                      ? 'bg-brand-600 text-white'
-                      : 'hover:bg-slate-100 text-slate-700'
-                  }`}
-                >
-                  <div className="font-semibold flex items-center justify-between">
-                    {b.name}
-                    {selected?.id === b.id && live && (
-                      <span className="text-xs bg-white/20 rounded-full px-2 py-0.5">
-                        {live.waiting_count}
-                      </span>
-                    )}
-                  </div>
-                  <div className={`text-xs ${selected?.id === b.id ? 'text-white/70' : 'text-slate-400'}`}>
-                    /q/{b.slug}
-                  </div>
-                </button>
-              ))}
-              {branches.length === 0 && (
-                <div className="text-xs text-slate-400 text-center py-4">İlk filialınızı yaradın</div>
-              )}
-            </div>
-          </div>
-        </aside>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 min-w-0">
 
         {/* ---- Sağ: seçili filialın dashboard-u ---- */}
-        <main className="space-y-4">
+        <main className="space-y-4 min-w-0">
           {!selected ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-400">
               Filial seçin →
@@ -307,12 +294,20 @@ export default function Dashboard() {
               </div>
 
               {/* Sürətli keçidlər */}
-              <div className="grid sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <QuickLink
+                  href={queueUrl(selected.slug)}
+                  icon="📱"
+                  title="Ziyarətçi səhifəsi"
+                  desc="QR skan → nömrə"
+                  external
+                />
                 <QuickLink
                   href={panelUrl(selected.slug)}
                   icon="⚙"
                   title="Operator paneli"
                   desc="Növbəti / Geri çağır"
+                  external
                 />
                 <QuickLink
                   href={displayUrl(selected.slug)}
@@ -332,7 +327,7 @@ export default function Dashboard() {
               </div>
 
               {/* QR + xidmət/ziyarətçi linkləri */}
-              <div className="grid lg:grid-cols-[280px_1fr] gap-4">
+              <div className="grid lg:grid-cols-[280px_1fr] gap-4 min-w-0">
                 <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col items-center">
                   <div className="w-44 h-44 rounded-xl border border-slate-100 p-2 grid place-items-center">
                     {qrDataUrl ? (
@@ -353,13 +348,8 @@ export default function Dashboard() {
                   </button>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
-                  <h3 className="font-bold text-slate-800 text-sm">Linklər</h3>
-                  <LinkRow label="Ziyarətçi səhifəsi" value={queueUrl(selected.slug)} />
-                  <LinkRow label="Operator paneli" value={panelUrl(selected.slug)} />
-                  <LinkRow label="Gözləmə ekranı" value={displayUrl(selected.slug)} />
-
-                  <h3 className="font-bold text-slate-800 text-sm pt-2">Xidmətlər</h3>
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3 min-w-0 overflow-hidden">
+                  <h3 className="font-bold text-slate-800 text-sm">Xidmətlər</h3>
                   <div className="flex flex-wrap gap-2">
                     {services.map((s) => (
                       <span
@@ -536,23 +526,6 @@ function QuickLink({
       <div className="font-semibold text-slate-800 text-sm mt-1">{title}</div>
       <div className="text-xs text-slate-400">{desc}</div>
     </a>
-  )
-}
-
-function LinkRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-2 text-sm">
-      <span className="text-slate-500 w-36 shrink-0">{label}</span>
-      <code className="flex-1 truncate bg-slate-50 rounded-lg px-2 py-1.5 text-xs text-slate-600">
-        {value}
-      </code>
-      <button
-        onClick={() => void navigator.clipboard.writeText(value)}
-        className="text-xs text-brand-600 hover:underline shrink-0"
-      >
-        kopyala
-      </button>
-    </div>
   )
 }
 
