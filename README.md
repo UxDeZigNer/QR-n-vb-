@@ -1,32 +1,42 @@
-# React + TypeScript + Vite
+# QR Növbə Sistemi
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+QR skan → ziyarətçi nömrə alır → real-time izləyir → operator «Növbəti» basır → gözləmə zalı ekranında görünür.
 
-Currently, two official plugins are available:
+## Texnologiyalar
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Frontend:** Vite + React + TypeScript + Tailwind CSS 4 (SPA)
+- **Backend:** Supabase (PostgreSQL + Realtime + Auth)
+- **Hosting:** GitHub Pages (push = avtomatik deploy)
 
-## React Compiler
+## Səhifələr
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Route | Nədir |
+|---|---|
+| `#/` | Landing (təqdimat) |
+| `#/q/<slug>` | Ziyarətçi — QR-skan → nömrə |
+| `#/panel/<slug>` | Operator paneli |
+| `#/display/<slug>` | Gözləmə zalı ekranı (TV) |
+| `#/auth` | Giriş / qeydiyyat |
+| `#/dashboard` | İdarəetmə (filial, xidmət, QR yükləmə) |
 
-## Expanding the Oxlint configuration
+## Quraşdırma
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+cp .env.example .env    # Supabase URL + anon key doldur
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Veritabanı
+
+`supabase/schema.sql` faylını Supabase **SQL Editor**-də bir dəfə işə salın.
+Sxemə daxildir: cədvəllər, RLS siyasətləri, atomik `join_queue` / `call_next` RPC.
+
+## Deploy
+
+`.github/workflows/deploy.yml` → push `main`-ə → GitHub Pages-ə avtomatik çıxır.
+Repo ayarlarında: **Settings → Pages → Source: GitHub Actions**.
+
+Environment dəyərləri (Settings → Secrets and variables → Actions → Variables):
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
