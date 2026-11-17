@@ -678,24 +678,24 @@ export default function Dashboard() {
         </div>
 
         {/* 7 günlük qrafik */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
-          <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-4">Son 7 gün</h3>
-          <div className="flex items-end gap-2 h-36">
-            {week.map((w, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{w.count || ''}</span>
-                <div
-                  className="w-full max-w-12 rounded-t-lg bg-brand-500/90 transition-all"
-                  style={{ height: `${Math.max(4, (w.count / maxCount) * 100)}px` }}
-                />
-                <span className="text-[10px] text-slate-400 dark:text-slate-500">{w.label}</span>
-              </div>
-            ))}
+        <div className="grid lg:grid-cols-3 gap-3">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-4">Son 7 gün</h3>
+            <div className="flex items-end gap-2 h-36">
+              {week.map((w, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{w.count || ''}</span>
+                  <div
+                    className="w-full max-w-12 rounded-t-lg bg-brand-500/90 transition-all"
+                    style={{ height: `${Math.max(4, (w.count / maxCount) * 100)}px` }}
+                  />
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">{w.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Xidmət radarı + Operator donut */}
-        <div className="grid md:grid-cols-2 gap-3">
+          {/* Xidmət radarı */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-2 flex items-center gap-1.5">
               <Icon icon="lucide:radar" className="w-4 h-4 text-brand-600 dark:text-brand-400" />
@@ -708,6 +708,8 @@ export default function Dashboard() {
               }))}
             />
           </div>
+
+          {/* Operator donut */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-2 flex items-center gap-1.5">
               <Icon icon="lucide:chart-pie" className="w-4 h-4 text-brand-600 dark:text-brand-400" />
