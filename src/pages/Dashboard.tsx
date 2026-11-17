@@ -262,22 +262,69 @@ export default function Dashboard() {
   }, [selected, section, from, to])
 
   // ---------- Əməliyyatlar ----------
-  async function createBranch() {
-    const name = prompt('Yeni filialın adı:')
-    if (!name?.trim()) return
-    const base = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'filial'
+  // ---- Filial modalı ----
+  const [brModal, setBrModal] = useState(false)
+  const [brEdit, setBrEdit] = useState<Branch | null>(null)
+  const [brName, setBrName] = useState('')
+  const [brAddress, setBrAddress] = useState('')
+  const [brPrefix, setBrPrefix] = useState('A')
+  const [busyBr, setBusyBr] = useState(false)
+
+  function openBranchModal(b?: Branch) {
+    setBrEdit(b ?? null)
+    setBrName(b?.name ?? '')
+    setBrAddress(b?.address ?? '')
+    setBrPrefix(b?.prefix ?? 'A')
+    setBrModal(true)
+  }
+
+  function closeBranchModal() {
+    setBrModal(false)
+    setBrEdit(null)
+  }
+
+  async function saveBranch() {
+    if (!brName.trim()) return flash('Filial adı yazın')
+    setBusyBr(true)
+    const prefix = brPrefix.trim().toUpperCase().slice(0, 3) || 'A'
+    if (brEdit) {
+      const { data, error } = await supabase
+        .from('branches')
+        .update({ name: brName.trim(), address: brAddress.trim() || null, prefix })
+        .eq('id', brEdit.id)
+        .select()
+        .single()
+      setBusyBr(false)
+      if (error) return flash(error.message)
+      const updated = data as Branch
+      setBranches((bs) => bs.map((b) => (b.id === updated.id ? updated : b)))
+      if (selected?.id === updated.id) {
+        setSelected(updated)
+        setCfgName(updated.name)
+        setCfgAddress(updated.address ?? '')
+        setCfgPrefix(updated.prefix)
+      }
+      closeBranchModal()
+      flash('Filial yeniləndi ✓')
+      return
+    }
+    const base = brName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'filial'
     const slug = `${base}-${Math.random().toString(36).slice(2, 6)}`
     const { data: org } = await supabase.from('orgs').select('id').limit(1).maybeSingle()
-    if (!org) return
+    if (!org) {
+      setBusyBr(false)
+      return
+    }
     const { data, error } = await supabase
       .from('branches')
-      .insert({ org_id: org.id, name: name.trim(), slug, prefix: 'A' })
+      .insert({ org_id: org.id, name: brName.trim(), slug, prefix, address: brAddress.trim() || null })
       .select()
       .single()
+    setBusyBr(false)
     if (error) return flash(error.message)
-    const list = await loadBranches(org.id)
+    closeBranchModal()
     openBranch(data as Branch)
-    void loadBranches(org.id)
+    const list = await loadBranches(org.id)
     setBranches(list)
     flash('Filial yaradıldı ✓')
   }
@@ -477,7 +524,7 @@ export default function Dashboard() {
         {/* Filial yarat */}
         <div className="p-3 border-t border-slate-100 dark:border-slate-800">
           <button
-            onClick={createBranch}
+            onClick={() => openBranchModal()}
             className="w-full rounded-xl border border-dashed border-slate-300 dark:border-slate-700 py-2.5 text-sm text-slate-500 dark:text-slate-400 hover:border-brand-400 hover:text-brand-600 transition flex items-center justify-center gap-1.5"
           >
             <Icon icon="lucide:plus" className="w-4 h-4" />
@@ -653,6 +700,79 @@ export default function Dashboard() {
           )}
         </main>
       </div>
+
+      {/* ================= FILIAL MODALI ================= */}
+      {brModal && (
+        <div
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+          onClick={closeBranchModal}
+        >
+          <div
+            className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-slate-800 dark:text-slate-100">
+                {brEdit ? 'Filiala düzəliş' : 'Yeni filial'}
+              </h3>
+              <button
+                onClick={closeBranchModal}
+                className="w-8 h-8 rounded-full grid place-items-center text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Bağla"
+              >
+                <Icon icon="lucide:x" className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Filial adı</label>
+                <input
+                  value={brName}
+                  onChange={(e) => setBrName(e.target.value)}
+                  placeholder="Məs. Mərkəz filialı"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-500"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Ünvan</label>
+                <input
+                  value={brAddress}
+                  onChange={(e) => setBrAddress(e.target.value)}
+                  placeholder="Məs. Bakı, Nizami 1"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Nömrə prefiksi</label>
+                <input
+                  value={brPrefix}
+                  onChange={(e) => setBrPrefix(e.target.value.toUpperCase().slice(0, 3))}
+                  className="w-24 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-500"
+                />
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                  Nömrələr: {brPrefix}-1, {brPrefix}-2 …
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={closeBranchModal}
+                className="flex-1 rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+              >
+                Ləğv et
+              </button>
+              <button
+                onClick={saveBranch}
+                disabled={busyBr}
+                className="flex-1 rounded-xl bg-brand-600 text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
+              >
+                {busyBr ? 'Gözləyin…' : brEdit ? 'Yenilə' : 'Yarat'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 
@@ -883,7 +1003,7 @@ export default function Dashboard() {
 
   function BranchesSection() {
     return (
-      <Card title={`Filiallar (${branches.length})`} action={<AddBtn onClick={createBranch} label="Filial yarat" />}>
+      <Card title={`Filiallar (${branches.length})`} action={<AddBtn onClick={() => openBranchModal()} label="Filial yarat" />}>
         <div className="grid sm:grid-cols-2 gap-3">
           {branches.map((b) => (
             <div
@@ -915,6 +1035,13 @@ export default function Dashboard() {
                     Seç
                   </button>
                 )}
+                <button
+                  onClick={() => openBranchModal(b)}
+                  className="rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:border-brand-400 hover:text-brand-600 flex items-center gap-1"
+                >
+                  <Icon icon="lucide:pencil" className="w-3.5 h-3.5" />
+                  Düzəliş
+                </button>
                 {selected?.id === b.id && (
                   <span className="text-xs text-brand-700 dark:text-brand-300 font-semibold px-2 py-1.5 flex items-center gap-1">
                     <Icon icon="lucide:check" className="w-3.5 h-3.5" />
