@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Icon } from '@iconify/react'
 import { useParams } from 'react-router-dom'
 import { getCurrent, getLive, getOperators, getServices, getWaiting, subscribeBranch } from '../lib/queue'
 import { supabase } from '../lib/supabase'
@@ -58,6 +59,12 @@ export default function Display() {
 
   if (!branch) return <div className="min-h-screen bg-slate-900" />
 
+  // Aktif nömrə göstərilsin? (köhnə/qalıq çağırış ekranı «Ö-3» kimi belə saxlamasın)
+  const currentFresh =
+    current != null &&
+    Date.now() - new Date(current.called_at ?? current.joined_at).getTime() < 10 * 60 * 1000
+  const showCurrent = current != null && (waitingCount > 0 || currentFresh)
+
   return (
     <div className="min-h-screen bg-slate-900 text-white flex flex-col select-none">
       {/* Başlıq */}
@@ -84,30 +91,42 @@ export default function Display() {
       <main className="flex-1 grid grid-cols-3 gap-8 p-10">
         {/* Hazırda çağırılan — böyük */}
         <div className="col-span-2 flex flex-col items-center justify-center rounded-3xl bg-brand-600">
-          <div className="text-lg uppercase tracking-widest opacity-70">Növbədə</div>
-          <div className="text-[10rem] leading-none font-black tabular-nums my-4">
-            {current?.code ?? '—'}
-          </div>
-          <div className="text-2xl opacity-80">
-            {current?.visitor_name ?? 'Xəstə/Müştəri nömrəsi'}
-          </div>
-          {current && (current.service_id || current.operator_id) && (
-            <div className="mt-2 text-lg opacity-70">
-              {[
-                current.service_id ? svcName[current.service_id] : null,
-                current.operator_id ? opName[current.operator_id] : null,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </div>
-          )}
-          {current?.called_at && (
-            <div className="mt-3 text-sm opacity-60">
-              Çağırıldı:{' '}
-              {new Date(current.called_at).toLocaleTimeString('az-AZ', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+          {showCurrent ? (
+            <>
+              <div className="text-lg uppercase tracking-widest opacity-70">Növbədə</div>
+              <div className="text-[10rem] leading-none font-black tabular-nums my-4">
+                {current?.code ?? '—'}
+              </div>
+              <div className="text-2xl opacity-80">
+                {current?.visitor_name ?? 'Xəstə/Müştəri nömrəsi'}
+              </div>
+              {current && (current.service_id || current.operator_id) && (
+                <div className="mt-2 text-lg opacity-70">
+                  {[
+                    current.service_id ? svcName[current.service_id] : null,
+                    current.operator_id ? opName[current.operator_id] : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </div>
+              )}
+              {current?.called_at && (
+                <div className="mt-3 text-sm opacity-60">
+                  Çağırıldı:{' '}
+                  {new Date(current.called_at).toLocaleTimeString('az-AZ', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center">
+              <Icon icon="lucide:qr-code" className="w-16 h-16 mx-auto opacity-50" />
+              <div className="text-5xl font-black mt-6">Növbə boşdur</div>
+              <div className="text-xl opacity-70 mt-3">
+                QR kodu skan edib nömrə alın — sıra siz burada göstəriləcək
+              </div>
             </div>
           )}
         </div>

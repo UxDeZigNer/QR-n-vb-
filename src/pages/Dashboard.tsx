@@ -23,7 +23,7 @@ type Section =
 
 const NAV: { id: Section; label: string; icon: string }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: 'lucide:layout-dashboard' },
-  { id: 'visitor', label: 'Ziyarətçi səhifəsi', icon: 'lucide:smartphone' },
+  { id: 'visitor', label: 'QR kodlar', icon: 'lucide:qr-code' },
   { id: 'operators', label: 'Operatorlar', icon: 'lucide:users' },
   { id: 'display', label: 'Gözləmə zalı ekranı', icon: 'lucide:monitor' },
   { id: 'branches', label: 'Filiallar', icon: 'lucide:building-2' },
@@ -666,7 +666,7 @@ export default function Dashboard() {
         <div className="grid sm:grid-cols-3 gap-3">
           <QuickBtn href={panelUrl(selected!.slug)} icon="lucide:list-checks" title="Operator paneli" desc="Növbəti / Geri çağır" />
           <QuickBtn href={displayUrl(selected!.slug)} icon="lucide:monitor" title="Gözləmə ekranı" desc="TV üçün" external />
-          <QuickBtn href={queueUrl(selected!.slug)} icon="lucide:smartphone" title="Ziyarətçi səhifəsi" desc="QR skan → nömrə" external />
+          <QuickBtn href={queueUrl(selected!.slug)} icon="lucide:qr-code" title="QR kodlar" desc="QR skan → nömrə" external />
         </div>
 
         {/* 7 günlük qrafik */}
@@ -732,9 +732,9 @@ export default function Dashboard() {
 
   function VisitorSection() {
     return (
-      <Card title="Ziyarətçi səhifəsi">
+      <Card title="QR kodlar">
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-          Ziyarətçilər QR-u skan edir → nömrə alır → real-time izləyir. Bu link QR kodların içindədir.
+          QR-u çap edib masaya yerləşdirin. Ziyarətçilər skan edir → nömrə alır → real-time izləyir.
         </p>
         <div className="flex flex-col sm:flex-row gap-6 items-start">
           <div className="w-48 h-48 rounded-xl border border-slate-100 dark:border-slate-800 p-2 grid place-items-center bg-white dark:bg-slate-900 shrink-0">
