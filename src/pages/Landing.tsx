@@ -1,31 +1,33 @@
+import { Icon } from '@iconify/react'
+
 const FEATURES = [
   {
-    icon: '📱',
+    icon: 'lucide:smartphone',
     title: 'Tətbiq yükləmək lazım deyil',
     desc: 'Ziyarətçilər telefon kamerası ilə QR-u skan edir və dərhal növbəyə qoşulur.',
   },
   {
-    icon: '⚡',
+    icon: 'lucide:zap',
     title: 'Anlıq yeniləmə',
     desc: 'Nömrə çağırılanda ziyarətçinin telefonu avtomatik yenilənir — heç kim nömrəsini qaçırmır.',
   },
   {
-    icon: '🖥',
+    icon: 'lucide:monitor',
     title: 'Gözləmə zalı ekranı',
     desc: 'Noutbuk və ya televizoru ekran kimi işlədin — xüsusi avadanlıq lazım deyil.',
   },
   {
-    icon: '🏷',
+    icon: 'lucide:tag',
     title: 'Brendinq',
     desc: 'Loqonuz, rəngləriniz və adınız ziyarətçilərin gördüyü bütün ekranlarda.',
   },
   {
-    icon: '📊',
+    icon: 'lucide:trending-up',
     title: 'Analitika',
     desc: 'Günlük ziyarət sayı, orta gözləmə vaxtı və xidmət payı — CSV ixracı ilə.',
   },
   {
-    icon: '🗂',
+    icon: 'lucide:building-2',
     title: 'Çoxfiliallıq',
     desc: 'Bütün filiallarınızı vahid paneldən idarə edin, hər birinə ayrıca QR.',
   },
@@ -135,7 +137,7 @@ export default function Landing() {
           <div className="grid md:grid-cols-3 gap-6 mt-10">
             {FEATURES.map((f) => (
               <div key={f.title} className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6">
-                <div className="text-3xl">{f.icon}</div>
+                <Icon icon={f.icon} className="w-8 h-8 text-brand-600 dark:text-brand-400" />
                 <div className="font-bold mt-3">{f.title}</div>
                 <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">{f.desc}</div>
               </div>

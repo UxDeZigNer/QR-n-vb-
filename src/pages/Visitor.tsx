@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Icon } from '@iconify/react'
 import { useParams } from 'react-router-dom'
 import {
   getBranchBySlug,
@@ -148,7 +149,7 @@ export default function Visitor() {
     return (
       <div className="min-h-screen grid place-items-center bg-brand-50 dark:bg-slate-950 px-6">
         <div className="text-center">
-          <div className="text-5xl mb-3">🔍</div>
+          <Icon icon="lucide:search" className="w-12 h-12 mx-auto mb-3 text-brand-500 dark:text-brand-400" />
           <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Növbə tapılmadı</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2">QR kodu yenidən skan edin və ya təşkilatla əlaqə saxlayın.</p>
         </div>
@@ -248,9 +249,18 @@ export default function Visitor() {
               <div className="text-7xl font-black tabular-nums my-2">{myTicket.code}</div>
               <div className="text-sm opacity-90">
                 {myTicket.status === 'waiting' && `Önünüzdə ${ahead} nəfər var`}
-                {(myTicket.status === 'called' || myTicket.status === 'serving') &&
-                  '⬇️ Siz çağırılırsınız!'}
-                {myTicket.status === 'done' && 'Xidmətiniz tamamlandı ✓'}
+                {(myTicket.status === 'called' || myTicket.status === 'serving') && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Icon icon="lucide:bell-ring" className="w-4 h-4" />
+                    Siz çağırılırsınız!
+                  </span>
+                )}
+                {myTicket.status === 'done' && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Icon icon="lucide:check" className="w-4 h-4" />
+                    Xidmətiniz tamamlandı
+                  </span>
+                )}
                 {myTicket.status === 'skipped' && 'Nömrəniz buraxıldı'}
               </div>
               {activeService && (

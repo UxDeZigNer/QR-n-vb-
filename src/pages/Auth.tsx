@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Icon } from '@iconify/react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
@@ -6,6 +7,7 @@ export default function Auth() {
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [fullName, setFullName] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -22,7 +24,7 @@ export default function Auth() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: redirect },
+          options: { emailRedirectTo: redirect, data: { full_name: fullName.trim() } },
         })
         if (error) throw error
         setMsg('Təsdiq linki e-poçtunuza göndərildi — linkə keçin və daxil olun.')
@@ -41,8 +43,9 @@ export default function Auth() {
   return (
     <div className="min-h-screen bg-brand-50 dark:bg-slate-950 grid place-items-center px-6">
       <div className="w-full max-w-sm">
-        <a href="#/" className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700">
-          ← Ana səhifə
+        <a href="#/" className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 inline-flex items-center gap-1">
+          <Icon icon="lucide:arrow-left" className="w-4 h-4" />
+          Ana səhifə
         </a>
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 mt-3 shadow-sm">
           <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">
@@ -53,6 +56,16 @@ export default function Auth() {
           </p>
 
           <form onSubmit={submit} className="mt-5 space-y-3">
+            {mode === 'signup' && (
+              <input
+                type="text"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Ad Soyad"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 outline-none focus:border-brand-500"
+              />
+            )}
             <input
               type="email"
               required

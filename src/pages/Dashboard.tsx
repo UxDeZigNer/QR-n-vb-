@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Icon } from '@iconify/react'
 import QRCode from 'qrcode'
 import { supabase } from '../lib/supabase'
 import { subscribeBranch } from '../lib/queue'
@@ -22,14 +23,14 @@ type Section =
   | 'settings'
 
 const NAV: { id: Section; label: string; icon: string }[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-  { id: 'visitor', label: 'Ziyarətçi səhifəsi', icon: '📱' },
-  { id: 'operators', label: 'Operatorlar', icon: '👷' },
-  { id: 'display', label: 'Gözləmə zalı ekranı', icon: '🖥' },
-  { id: 'qr', label: 'QR kodlar', icon: '⬛' },
-  { id: 'branches', label: 'Filiallar', icon: '🏢' },
-  { id: 'services', label: 'Xidmətlər', icon: '🛎' },
-  { id: 'history', label: 'Ziyarətçilər', icon: '📋' },
+  { id: 'dashboard', label: 'Dashboard', icon: 'lucide:layout-dashboard' },
+  { id: 'visitor', label: 'Ziyarətçi səhifəsi', icon: 'lucide:smartphone' },
+  { id: 'operators', label: 'Operatorlar', icon: 'lucide:users' },
+  { id: 'display', label: 'Gözləmə zalı ekranı', icon: 'lucide:monitor' },
+  { id: 'qr', label: 'QR kodlar', icon: 'lucide:qr-code' },
+  { id: 'branches', label: 'Filiallar', icon: 'lucide:building-2' },
+  { id: 'services', label: 'Xidmətlər', icon: 'lucide:concierge-bell' },
+  { id: 'history', label: 'Ziyarətçilər', icon: 'lucide:clipboard-list' },
 ]
 
 const STATUS: Record<Ticket['status'], { t: string; c: string }> = {
@@ -64,6 +65,7 @@ export default function Dashboard() {
   const [notifOpen, setNotifOpen] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [theme, setTheme] = useState<Theme>(getStoredTheme)
+  const [userName, setUserName] = useState('')
 
   const flash = (m: string) => {
     setMsg(m)
@@ -193,6 +195,9 @@ export default function Dashboard() {
         return
       }
       setEmail(data.session.user.email ?? '')
+      const { data: ud } = await supabase.auth.getUser()
+      const meta = (ud.user?.user_metadata ?? {}) as Record<string, string>
+      setUserName(meta.full_name || meta.name || (data.session.user.email ?? ''))
       const uid = data.session.user.id
 
       let { data: org } = await supabase.from('orgs').select('*').eq('owner_id', uid).maybeSingle()
@@ -317,6 +322,15 @@ export default function Dashboard() {
     void navigator.clipboard.writeText(text).then(() => flash('Kopyalandı ✓'))
   }
 
+  async function renameSelf() {
+    const v = prompt('Ad, Soyad:', userName)
+    if (!v?.trim()) return
+    const { error } = await supabase.auth.updateUser({ data: { full_name: v.trim() } })
+    if (error) return flash(error.message)
+    setUserName(v.trim())
+    flash('Ad yeniləndi ✓')
+  }
+
   async function signOut() {
     await supabase.auth.signOut()
     window.location.hash = '/'
@@ -404,7 +418,12 @@ export default function Dashboard() {
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
-              <span className="text-base w-5 text-center">{n.icon}</span>
+              <Icon
+                icon={n.icon}
+                className={`w-[18px] h-[18px] shrink-0 ${
+                  section === n.id ? 'text-white' : 'text-slate-500 dark:text-slate-400'
+                }`}
+              />
               {n.label}
               {n.id === 'dashboard' && selected && (
                 <span
@@ -423,9 +442,10 @@ export default function Dashboard() {
         <div className="p-3 border-t border-slate-100 dark:border-slate-800">
           <button
             onClick={createBranch}
-            className="w-full rounded-xl border border-dashed border-slate-300 dark:border-slate-700 py-2.5 text-sm text-slate-500 dark:text-slate-400 hover:border-brand-400 hover:text-brand-600 transition"
+            className="w-full rounded-xl border border-dashed border-slate-300 dark:border-slate-700 py-2.5 text-sm text-slate-500 dark:text-slate-400 hover:border-brand-400 hover:text-brand-600 transition flex items-center justify-center gap-1.5"
           >
-            + Filial yarat
+            <Icon icon="lucide:plus" className="w-4 h-4" />
+            Filial yarat
           </button>
         </div>
       </aside>
@@ -445,10 +465,10 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="md:hidden text-slate-500 dark:text-slate-400 text-xl"
+              className="md:hidden text-slate-500 dark:text-slate-400"
               aria-label="Menyu"
             >
-              ☰
+              <Icon icon="lucide:menu" className="w-6 h-6" />
             </button>
             <div className="flex items-center gap-2 md:hidden">
               <span className="w-7 h-7 rounded-lg bg-brand-600 text-white grid place-items-center text-sm font-black">
@@ -470,7 +490,10 @@ export default function Dashboard() {
               className="w-9 h-9 rounded-full grid place-items-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               title={theme === 'dark' ? 'İşıqlı rejim' : 'Qaranlıq rejim'}
             >
-              {theme === 'dark' ? '☀️' : '🌙'}
+              <Icon
+                icon={theme === 'dark' ? 'lucide:sun' : 'lucide:moon'}
+                className="w-5 h-5"
+              />
             </button>
 
             {/* Bildirişlər */}
@@ -483,7 +506,7 @@ export default function Dashboard() {
                 className="relative w-9 h-9 rounded-full grid place-items-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                 title="Bildirişlər"
               >
-                🔔
+                <Icon icon="lucide:bell" className="w-5 h-5" />
                 {(live?.waiting_count ?? 0) > 0 && (
                   <span className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold grid place-items-center">
                     {Math.min(live?.waiting_count ?? 0, 9)}
@@ -518,19 +541,6 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Tənzimləmələr */}
-            <button
-              onClick={() => {
-                go('settings')
-                setNotifOpen(false)
-                setUserMenu(false)
-              }}
-              className="w-9 h-9 rounded-full grid place-items-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-              title="Tənzimləmələr"
-            >
-              ⚙
-            </button>
-
             {/* İstifadəçi */}
             <div className="relative">
               <button
@@ -541,32 +551,49 @@ export default function Dashboard() {
                 className="flex items-center gap-2 rounded-full pl-1 pr-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 <span className="w-7 h-7 rounded-full bg-brand-600 text-white text-xs font-bold grid place-items-center uppercase">
-                  {userEmail.charAt(0)}
+                  {(userName || userEmail).charAt(0)}
                 </span>
-                <span className="hidden sm:block text-sm font-medium text-slate-700 dark:text-slate-200 max-w-[120px] truncate">
-                  {userEmail}
+                <span className="hidden sm:block text-sm font-medium text-slate-700 dark:text-slate-200 max-w-[140px] truncate">
+                  {userName || userEmail}
                 </span>
-                <span className="text-slate-400 dark:text-slate-500 text-xs">▾</span>
+                <Icon icon="lucide:chevron-down" className="w-4 h-4 text-slate-400 dark:text-slate-500" />
               </button>
               {userMenu && (
                 <>
                   <div className="fixed inset-0" onClick={() => setUserMenu(false)} />
                   <div className="absolute right-0 top-11 w-56 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
                     <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
-                      <div className="text-xs text-slate-400 dark:text-slate-500">Daxil olub</div>
-                      <div className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{userEmail}</div>
+                      <div className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
+                        {userName || 'Ad yoxdur'}
+                      </div>
+                      <div className="text-xs text-slate-400 dark:text-slate-500 truncate">{userEmail}</div>
                     </div>
                     <button
-                      onClick={() => go('settings')}
-                      className="w-full text-left px-4 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                      onClick={() => {
+                        renameSelf()
+                        setUserMenu(false)
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 flex items-center gap-2"
                     >
-                      ⚙ Tənzimləmələr
+                      <Icon icon="lucide:user" className="w-4 h-4" />
+                      Ad dəyiş
+                    </button>
+                    <button
+                      onClick={() => {
+                        go('settings')
+                        setUserMenu(false)
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 flex items-center gap-2"
+                    >
+                      <Icon icon="lucide:settings" className="w-4 h-4" />
+                      Tənzimləmələr
                     </button>
                     <button
                       onClick={signOut}
-                      className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"
+                      className="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2"
                     >
-                      ⎋ Hesabdan çıx
+                      <Icon icon="lucide:log-out" className="w-4 h-4" />
+                      Hesabdan çıx
                     </button>
                   </div>
                 </>
@@ -621,9 +648,9 @@ export default function Dashboard() {
 
         {/* Sürətli keçidlər */}
         <div className="grid sm:grid-cols-3 gap-3">
-          <QuickBtn href={panelUrl(selected!.slug)} icon="⚙" title="Operator paneli" desc="Növbəti / Geri çağır" />
-          <QuickBtn href={displayUrl(selected!.slug)} icon="🖥" title="Gözləmə ekranı" desc="TV üçün" external />
-          <QuickBtn href={queueUrl(selected!.slug)} icon="📱" title="Ziyarətçi səhifəsi" desc="QR skan → nömrə" external />
+          <QuickBtn href={panelUrl(selected!.slug)} icon="lucide:list-checks" title="Operator paneli" desc="Növbəti / Geri çağır" />
+          <QuickBtn href={displayUrl(selected!.slug)} icon="lucide:monitor" title="Gözləmə ekranı" desc="TV üçün" external />
+          <QuickBtn href={queueUrl(selected!.slug)} icon="lucide:smartphone" title="Ziyarətçi səhifəsi" desc="QR skan → nömrə" external />
         </div>
 
         {/* 7 günlük qrafik */}
@@ -649,9 +676,10 @@ export default function Dashboard() {
             <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Bugünkü ziyarətlər</h3>
             <button
               onClick={() => go('history')}
-              className="text-xs text-brand-600 hover:underline"
+              className="text-xs text-brand-600 hover:underline flex items-center gap-1"
             >
-              Bütün tarixçə →
+              Bütün tarixçə
+              <Icon icon="lucide:arrow-right" className="w-3.5 h-3.5" />
             </button>
           </div>
           <div className="space-y-1">
@@ -705,9 +733,10 @@ export default function Dashboard() {
                 href={queueUrl(selected!.slug)}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700"
+                className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700 flex items-center gap-1.5"
               >
-                Aç →
+                Aç
+                <Icon icon="lucide:arrow-right" className="w-4 h-4" />
               </a>
               <button
                 onClick={() => copy(queueUrl(selected!.slug))}
@@ -769,7 +798,8 @@ export default function Dashboard() {
             rel="noreferrer"
             className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700"
           >
-            🖥 Ekranı aç
+              <Icon icon="lucide:monitor" className="w-4 h-4 inline-block mr-1.5 -mt-0.5" />
+              Ekranı aç
           </a>
           <button
             onClick={() => copy(displayUrl(selected!.slug))}
@@ -778,7 +808,10 @@ export default function Dashboard() {
             Linki kopyala
           </button>
         </div>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-4">💡 Tam ekran üçün: F11 (Windows) / ⌃⌘F (Mac)</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-4 flex items-center gap-1.5">
+          <Icon icon="lucide:info" className="w-4 h-4 shrink-0" />
+          Tam ekran üçün: F11 (Windows) / ⌃⌘F (Mac)
+        </p>
       </Card>
     )
   }
@@ -802,7 +835,8 @@ export default function Dashboard() {
                 onClick={downloadQr}
                 className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700"
               >
-                ⬇ PNG yüklə
+                <Icon icon="lucide:download" className="w-4 h-4 inline-block mr-1.5 -mt-0.5" />
+                PNG yüklə
               </button>
               <button
                 onClick={() => copy(queueUrl(selected!.slug))}
@@ -852,7 +886,10 @@ export default function Dashboard() {
                   </button>
                 )}
                 {selected?.id === b.id && (
-                  <span className="text-xs text-brand-700 font-semibold px-2 py-1.5">Seçilib ✓</span>
+                  <span className="text-xs text-brand-700 dark:text-brand-300 font-semibold px-2 py-1.5 flex items-center gap-1">
+                    <Icon icon="lucide:check" className="w-3.5 h-3.5" />
+                    Seçilib
+                  </span>
                 )}
               </div>
             </div>
@@ -923,7 +960,8 @@ export default function Dashboard() {
             onClick={exportCsv}
             className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
           >
-            ⬇ CSV yüklə
+            <Icon icon="lucide:download" className="w-4 h-4 inline-block mr-1.5 -mt-0.5" />
+            CSV yüklə
           </button>
         </div>
 
@@ -1085,8 +1123,8 @@ export default function Dashboard() {
         rel={external ? 'noreferrer' : undefined}
         className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:border-brand-400 transition"
       >
-        <div className="text-2xl">{icon}</div>
-        <div className="font-semibold text-slate-800 dark:text-slate-100 text-sm mt-1">{title}</div>
+        <Icon icon={icon} className="w-6 h-6 text-brand-600 dark:text-brand-400" />
+        <div className="font-semibold text-slate-800 dark:text-slate-100 text-sm mt-2">{title}</div>
         <div className="text-xs text-slate-400 dark:text-slate-500">{desc}</div>
       </a>
     )

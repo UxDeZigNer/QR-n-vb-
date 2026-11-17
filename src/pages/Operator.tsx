@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Icon } from '@iconify/react'
 import { useParams } from 'react-router-dom'
 import {
   callNext,
@@ -189,9 +190,10 @@ export default function Operator() {
           {current && (
             <button
               onClick={() => openRedirect(current)}
-              className="mt-3 rounded-full bg-white/10 hover:bg-white/20 px-4 py-1.5 text-sm transition"
+              className="mt-3 rounded-full bg-white/10 hover:bg-white/20 px-4 py-1.5 text-sm transition inline-flex items-center gap-1.5"
             >
-              → Yönləndir
+              <Icon icon="lucide:corner-up-right" className="w-4 h-4" />
+              Yönləndir
             </button>
           )}
         </div>
@@ -201,24 +203,27 @@ export default function Operator() {
           <button
             onClick={handleNext}
             disabled={busy}
-            className="col-span-2 rounded-2xl bg-brand-600 text-white text-xl font-bold py-5 hover:bg-brand-700 disabled:opacity-50 transition shadow-md"
+            className="col-span-2 rounded-2xl bg-brand-600 text-white text-xl font-bold py-5 hover:bg-brand-700 disabled:opacity-50 transition shadow-md flex items-center justify-center gap-2"
           >
-            ▶ Növbəti
+            <Icon icon="lucide:play" className="w-6 h-6" />
+            Növbəti
           </button>
           <button
             onClick={handleRecall}
             disabled={!current || busy}
-            className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 py-4 font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40"
+            className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 py-4 font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 flex items-center justify-center gap-2"
           >
-            🔁 Geri çağır
+            <Icon icon="lucide:rotate-ccw" className="w-5 h-5" />
+            Geri çağır
           </button>
           <a
             href={`#/display/${branch.slug}`}
             target="_blank"
             rel="noreferrer"
-            className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 py-4 font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-center"
+            className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 py-4 font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-center flex items-center justify-center gap-2"
           >
-            🖥 Ekranı aç
+            <Icon icon="lucide:monitor" className="w-5 h-5" />
+            Ekranı aç
           </a>
         </div>
 
@@ -251,7 +256,7 @@ export default function Operator() {
                 className="shrink-0 text-xs rounded-lg border border-slate-200 dark:border-slate-800 px-2 py-1.5 text-slate-500 dark:text-slate-400 hover:border-brand-400 hover:text-brand-600"
                 title="Digər xidmətə / əməkdaşa yönləndir"
               >
-                →
+                <Icon icon="lucide:arrow-right" className="w-4 h-4" />
               </button>
             </div>
           ))}
