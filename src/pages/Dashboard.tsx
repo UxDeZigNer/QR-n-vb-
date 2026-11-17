@@ -64,9 +64,15 @@ export default function Dashboard() {
   const [msg, setMsg] = useState<string | null>(null)
   const [theme, setTheme] = useState<Theme>(getStoredTheme)
   const [userName, setUserName] = useState('')
-  const [accName, setAccName] = useState('')
+  const [accFirst, setAccFirst] = useState('')
+  const [accLast, setAccLast] = useState('')
   const [accPhone, setAccPhone] = useState('')
   const [busyAcc, setBusyAcc] = useState(false)
+  const [pwdOld, setPwdOld] = useState('')
+  const [pwdNew, setPwdNew] = useState('')
+  const [pwdNew2, setPwdNew2] = useState('')
+  const [busyPwd, setBusyPwd] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<'account' | 'password' | 'branch'>('account')
 
   const flash = (m: string) => {
     setMsg(m)
@@ -198,8 +204,11 @@ export default function Dashboard() {
       setEmail(data.session.user.email ?? '')
       const { data: ud } = await supabase.auth.getUser()
       const meta = (ud.user?.user_metadata ?? {}) as Record<string, string>
-      setUserName(meta.full_name || meta.name || (data.session.user.email ?? ''))
-      setAccName(meta.full_name || meta.name || '')
+      const fn: string = meta.full_name || meta.name || ''
+      setUserName(fn || (data.session.user.email ?? ''))
+      const parts = fn.split(' ')
+      setAccFirst(parts[0] ?? '')
+      setAccLast(parts.slice(1).join(' '))
       setAccPhone(meta.phone ?? '')
       const uid = data.session.user.id
 
@@ -327,13 +336,27 @@ export default function Dashboard() {
 
   async function saveAccount() {
     setBusyAcc(true)
+    const full = `${accFirst.trim()} ${accLast.trim()}`.trim()
     const { error } = await supabase.auth.updateUser({
-      data: { full_name: accName.trim(), phone: accPhone.trim() },
+      data: { full_name: full, phone: accPhone.trim() },
     })
     setBusyAcc(false)
     if (error) return flash(error.message)
-    setUserName(accName.trim())
+    setUserName(full || userEmail)
     flash('Hesab məlumatları saxlanıldı ✓')
+  }
+
+  async function savePassword() {
+    if (pwdNew.length < 6) return flash('Yeni şifrə ən azı 6 simvol olmalıdır')
+    if (pwdNew !== pwdNew2) return flash('Yeni şifrələr üst-üstə düşmür')
+    setBusyPwd(true)
+    const { error } = await supabase.auth.updateUser({ password: pwdNew })
+    setBusyPwd(false)
+    if (error) return flash(error.message)
+    setPwdOld('')
+    setPwdNew('')
+    setPwdNew2('')
+    flash('Şifrə yeniləndi ✓')
   }
 
   async function signOut() {
@@ -604,21 +627,21 @@ export default function Dashboard() {
               Sol menyu → Filial seçin (və ya «Filiallar» bölməsində yaradın)
             </div>
           ) : section === 'dashboard' ? (
-            <DashboardSection />
+            DashboardSection()
           ) : section === 'visitor' ? (
-            <VisitorSection />
+            VisitorSection()
           ) : section === 'operators' ? (
-            <OperatorsSection />
+            OperatorsSection()
           ) : section === 'display' ? (
-            <DisplaySection />
+            DisplaySection()
           ) : section === 'branches' ? (
-            <BranchesSection />
+            BranchesSection()
           ) : section === 'services' ? (
-            <ServicesSection />
+            ServicesSection()
           ) : section === 'history' ? (
-            <HistorySection />
+            HistorySection()
           ) : (
-            <SettingsSection />
+            SettingsSection()
           )}
         </main>
       </div>
@@ -908,7 +931,7 @@ export default function Dashboard() {
               value={from}
               max={todayStr}
               onChange={(e) => setFrom(e.target.value)}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm outline-none focus:border-brand-500"
+              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-500"
             />
           </div>
           <div>
@@ -918,7 +941,7 @@ export default function Dashboard() {
               value={to}
               min={from}
               onChange={(e) => setTo(e.target.value)}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm outline-none focus:border-brand-500"
+              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-500"
             />
           </div>
           <button
@@ -980,49 +1003,142 @@ export default function Dashboard() {
   }
 
   function SettingsSection() {
+    const TABS: { id: typeof settingsTab; label: string; icon: string }[] = [
+      { id: 'account', label: 'Hesab', icon: 'lucide:user' },
+      { id: 'password', label: 'Şifrə', icon: 'lucide:key-round' },
+      { id: 'branch', label: 'Filial', icon: 'lucide:building-2' },
+    ]
+    const inputCls =
+      'w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-500'
     return (
       <div className="space-y-4 max-w-5xl mx-auto">
-        {/* Hesab */}
-        <Card title="Hesab">
-          <div className="space-y-4 max-w-md">
-            <div>
-              <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Ad Soyad</label>
-              <input
-                value={accName}
-                onChange={(e) => setAccName(e.target.value)}
-                placeholder="Məs. Əli Məmmədov"
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm outline-none focus:border-brand-500 bg-white dark:bg-slate-900"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Mobil nömrə</label>
-              <input
-                value={accPhone}
-                onChange={(e) => setAccPhone(e.target.value)}
-                placeholder="Məs. +994 50 123 45 67"
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm outline-none focus:border-brand-500 bg-white dark:bg-slate-900"
-              />
-            </div>
+        {/* Tablar */}
+        <div className="flex gap-2">
+          {TABS.map((t) => (
             <button
-              onClick={saveAccount}
-              disabled={busyAcc}
-              className="rounded-xl bg-brand-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
+              key={t.id}
+              onClick={() => setSettingsTab(t.id)}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold transition flex items-center gap-1.5 ${
+                settingsTab === t.id
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-brand-400'
+              }`}
             >
-              {busyAcc ? 'Gözləyin…' : 'Saxla'}
+              <Icon icon={t.icon} className="w-4 h-4" />
+              {t.label}
             </button>
-            <p className="text-xs text-slate-400 dark:text-slate-500">Ad Soyad header-də və dropdown-da göstərilir.</p>
-          </div>
-        </Card>
+          ))}
+        </div>
+
+        {/* Hesab */}
+        {settingsTab === 'account' && (
+          <Card title="Hesab">
+            <div className="space-y-4 max-w-md">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Ad</label>
+                  <input
+                    value={accFirst}
+                    onChange={(e) => setAccFirst(e.target.value)}
+                    placeholder="Məs. Əli"
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Soyad</label>
+                  <input
+                    value={accLast}
+                    onChange={(e) => setAccLast(e.target.value)}
+                    placeholder="Məs. Məmmədov"
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">E-poçt</label>
+                <input
+                  value={userEmail}
+                  readOnly
+                  className={`${inputCls} opacity-60 cursor-not-allowed`}
+                />
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">E-poçt daxil olma ünvanıdır — dəyişmir.</p>
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Mobil nömrə</label>
+                <input
+                  value={accPhone}
+                  onChange={(e) => setAccPhone(e.target.value)}
+                  placeholder="Məs. +994 50 123 45 67"
+                  className={inputCls}
+                />
+              </div>
+              <button
+                onClick={saveAccount}
+                disabled={busyAcc}
+                className="rounded-xl bg-brand-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
+              >
+                {busyAcc ? 'Gözləyin…' : 'Saxla'}
+              </button>
+              <p className="text-xs text-slate-400 dark:text-slate-500">Ad Soyad header-də və dropdown-da göstərilir.</p>
+            </div>
+          </Card>
+        )}
+
+        {/* Şifrə */}
+        {settingsTab === 'password' && (
+          <Card title="Şifrəni dəyiş">
+            <div className="space-y-4 max-w-md">
+              <div>
+                <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Köhnə şifrə</label>
+                <input
+                  type="password"
+                  value={pwdOld}
+                  onChange={(e) => setPwdOld(e.target.value)}
+                  placeholder="••••••••"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Yeni şifrə</label>
+                <input
+                  type="password"
+                  value={pwdNew}
+                  onChange={(e) => setPwdNew(e.target.value)}
+                  placeholder="Ən azı 6 simvol"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Yeni şifrə (təkrar)</label>
+                <input
+                  type="password"
+                  value={pwdNew2}
+                  onChange={(e) => setPwdNew2(e.target.value)}
+                  placeholder="Yeni şifrəni yenidən yazın"
+                  className={inputCls}
+                />
+              </div>
+              <button
+                onClick={savePassword}
+                disabled={busyPwd}
+                className="rounded-xl bg-brand-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
+              >
+                {busyPwd ? 'Gözləyin…' : 'Şifrəni yenilə'}
+              </button>
+            </div>
+          </Card>
+        )}
 
         {/* Filial */}
-        <Card title="Filial tənzimləmələri">
-          <div className="space-y-4 max-w-md">
+        {settingsTab === 'branch' && (
+          <Card title="Filial tənzimləmələri">
+            <div className="space-y-4 max-w-md">
           <div>
             <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Filial adı</label>
             <input
               value={cfgName}
               onChange={(e) => setCfgName(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm outline-none focus:border-brand-500"
+              className={inputCls}
             />
           </div>
           <div>
@@ -1031,7 +1147,7 @@ export default function Dashboard() {
               value={cfgAddress}
               onChange={(e) => setCfgAddress(e.target.value)}
               placeholder="Məs. Bakı, Nizami 1"
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm outline-none focus:border-brand-500"
+              className={inputCls}
             />
           </div>
           <div>
@@ -1039,7 +1155,7 @@ export default function Dashboard() {
             <input
               value={cfgPrefix}
               onChange={(e) => setCfgPrefix(e.target.value.toUpperCase().slice(0, 3))}
-              className="w-24 rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm outline-none focus:border-brand-500"
+              className={`${inputCls} w-24`}
             />
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Nömrələr bu şəkildə olacaq: {cfgPrefix}-1, {cfgPrefix}-2 …</p>
           </div>
@@ -1049,89 +1165,91 @@ export default function Dashboard() {
           >
             Saxla
           </button>
-        </div>
-        </Card>
+            </div>
+          </Card>
+        )}
       </div>
     )
   }
 
-  // ================= Köməkçi komponentlər =================
+}
 
-  function Card({
-    title,
-    action,
-    children,
-  }: {
-    title: string
-    action?: React.ReactNode
-    children: React.ReactNode
-  }) {
-    return (
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 max-w-5xl">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-slate-800 dark:text-slate-100">{title}</h2>
-          {action}
-        </div>
-        {children}
+// ================= Köməkçi komponentlər =================
+
+function Card({
+  title,
+  action,
+  children,
+}: {
+  title: string
+  action?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 max-w-5xl">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-bold text-slate-800 dark:text-slate-100">{title}</h2>
+        {action}
       </div>
-    )
-  }
+      {children}
+    </div>
+  )
+}
 
-  function AddBtn({ onClick, label }: { onClick: () => void; label: string }) {
-    return (
-      <button
-        onClick={onClick}
-        className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700 shrink-0"
-      >
-        + {label}
-      </button>
-    )
-  }
+function AddBtn({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700 shrink-0"
+    >
+      + {label}
+    </button>
+  )
+}
 
-  function StatCard({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-    return (
-      <div
-        className={`rounded-2xl border p-4 ${
-          accent ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-        }`}
-      >
-        <div className={`text-xs ${accent ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}`}>{label}</div>
-        <div className={`text-2xl font-black tabular-nums mt-1 ${accent ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
-          {value}
-        </div>
+function StatCard({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div
+      className={`rounded-2xl border p-4 ${
+        accent ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+      }`}
+    >
+      <div className={`text-xs ${accent ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}`}>{label}</div>
+      <div className={`text-2xl font-black tabular-nums mt-1 ${accent ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
+        {value}
       </div>
-    )
-  }
+    </div>
+  )
+}
 
-  function QuickBtn({
-    href,
-    icon,
-    title,
-    desc,
-    external,
-  }: {
-    href: string
-    icon: string
-    title: string
-    desc: string
-    external?: boolean
-  }) {
-    return (
-      <a
-        href={href}
-        target={external ? '_blank' : undefined}
-        rel={external ? 'noreferrer' : undefined}
-        className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:border-brand-400 transition"
-      >
-        <Icon icon={icon} className="w-6 h-6 text-brand-600 dark:text-brand-400" />
-        <div className="font-semibold text-slate-800 dark:text-slate-100 text-sm mt-2">{title}</div>
-        <div className="text-xs text-slate-400 dark:text-slate-500">{desc}</div>
-      </a>
-    )
-  }
+function QuickBtn({
+  href,
+  icon,
+  title,
+  desc,
+  external,
+}: {
+  href: string
+  icon: string
+  title: string
+  desc: string
+  external?: boolean
+}) {
+  return (
+    <a
+      href={href}
+      target={external ? '_blank' : undefined}
+      rel={external ? 'noreferrer' : undefined}
+      className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:border-brand-400 transition"
+    >
+      <Icon icon={icon} className="w-6 h-6 text-brand-600 dark:text-brand-400" />
+      <div className="font-semibold text-slate-800 dark:text-slate-100 text-sm mt-2">{title}</div>
+      <div className="text-xs text-slate-400 dark:text-slate-500">{desc}</div>
+    </a>
+  )
+}
 
-  function StatusBadge({ status }: { status: Ticket['status'] }) {
-    const s = STATUS[status]
-    return <span className={`text-xs rounded-full px-2 py-0.5 ${s.c}`}>{s.t}</span>
-  }
+function StatusBadge({ status }: { status: Ticket['status'] }) {
+  const s = STATUS[status]
+  return <span className={`text-xs rounded-full px-2 py-0.5 ${s.c}`}>{s.t}</span>
 }

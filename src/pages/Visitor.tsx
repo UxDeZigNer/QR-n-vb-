@@ -222,7 +222,7 @@ export default function Visitor() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Məsələn, Elvin"
-                  className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 outline-none focus:border-brand-500"
+                  className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-3 py-2 outline-none focus:border-brand-500"
                 />
               </div>
 

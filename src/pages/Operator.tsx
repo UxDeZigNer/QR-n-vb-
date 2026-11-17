@@ -156,7 +156,7 @@ export default function Operator() {
               <select
                 value={meId}
                 onChange={(e) => pickMe(e.target.value)}
-                className="rounded-xl border border-slate-200 dark:border-slate-800 px-2 py-1.5 text-sm bg-white dark:bg-slate-900 outline-none focus:border-brand-500 max-w-[140px]"
+                className="rounded-xl border border-slate-200 dark:border-slate-800 px-2 py-1.5 text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:border-brand-500 max-w-[140px]"
                 title="Mən kiməm — çağırılan nömrə sizə bağlanır"
               >
                 <option value="">Operator seçin</option>

@@ -65,7 +65,7 @@ export default function Auth() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Ad Soyad"
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 outline-none focus:border-brand-500"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-3 py-2.5 outline-none focus:border-brand-500"
                 />
                 <input
                   type="tel"
@@ -73,7 +73,7 @@ export default function Auth() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="Mobil nömrə (+994…)"
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 outline-none focus:border-brand-500"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-3 py-2.5 outline-none focus:border-brand-500"
                 />
               </>
             )}
@@ -83,7 +83,7 @@ export default function Auth() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="E-poçt"
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 outline-none focus:border-brand-500"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-3 py-2.5 outline-none focus:border-brand-500"
             />
             <input
               type="password"
@@ -92,7 +92,7 @@ export default function Auth() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Şifrə"
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 outline-none focus:border-brand-500"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-3 py-2.5 outline-none focus:border-brand-500"
             />
 
             {error && <div className="text-sm text-red-600">{error}</div>}
