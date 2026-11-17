@@ -8,6 +8,7 @@ export default function Auth() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
+  const [phone, setPhone] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -24,7 +25,7 @@ export default function Auth() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: redirect, data: { full_name: fullName.trim() } },
+          options: { emailRedirectTo: redirect, data: { full_name: fullName.trim(), phone: phone.trim() } },
         })
         if (error) throw error
         setMsg('Təsdiq linki e-poçtunuza göndərildi — linkə keçin və daxil olun.')
@@ -57,14 +58,24 @@ export default function Auth() {
 
           <form onSubmit={submit} className="mt-5 space-y-3">
             {mode === 'signup' && (
-              <input
-                type="text"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Ad Soyad"
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 outline-none focus:border-brand-500"
-              />
+              <>
+                <input
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Ad Soyad"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 outline-none focus:border-brand-500"
+                />
+                <input
+                  type="tel"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Mobil nömrə (+994…)"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 outline-none focus:border-brand-500"
+                />
+              </>
             )}
             <input
               type="email"

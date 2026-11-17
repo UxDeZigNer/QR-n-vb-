@@ -16,7 +16,6 @@ type Section =
   | 'visitor'
   | 'operators'
   | 'display'
-  | 'qr'
   | 'branches'
   | 'services'
   | 'history'
@@ -27,7 +26,6 @@ const NAV: { id: Section; label: string; icon: string }[] = [
   { id: 'visitor', label: 'Ziyarətçi səhifəsi', icon: 'lucide:smartphone' },
   { id: 'operators', label: 'Operatorlar', icon: 'lucide:users' },
   { id: 'display', label: 'Gözləmə zalı ekranı', icon: 'lucide:monitor' },
-  { id: 'qr', label: 'QR kodlar', icon: 'lucide:qr-code' },
   { id: 'branches', label: 'Filiallar', icon: 'lucide:building-2' },
   { id: 'services', label: 'Xidmətlər', icon: 'lucide:concierge-bell' },
   { id: 'history', label: 'Ziyarətçilər', icon: 'lucide:clipboard-list' },
@@ -66,6 +64,9 @@ export default function Dashboard() {
   const [msg, setMsg] = useState<string | null>(null)
   const [theme, setTheme] = useState<Theme>(getStoredTheme)
   const [userName, setUserName] = useState('')
+  const [accName, setAccName] = useState('')
+  const [accPhone, setAccPhone] = useState('')
+  const [busyAcc, setBusyAcc] = useState(false)
 
   const flash = (m: string) => {
     setMsg(m)
@@ -198,6 +199,8 @@ export default function Dashboard() {
       const { data: ud } = await supabase.auth.getUser()
       const meta = (ud.user?.user_metadata ?? {}) as Record<string, string>
       setUserName(meta.full_name || meta.name || (data.session.user.email ?? ''))
+      setAccName(meta.full_name || meta.name || '')
+      setAccPhone(meta.phone ?? '')
       const uid = data.session.user.id
 
       let { data: org } = await supabase.from('orgs').select('*').eq('owner_id', uid).maybeSingle()
@@ -322,13 +325,15 @@ export default function Dashboard() {
     void navigator.clipboard.writeText(text).then(() => flash('Kopyalandı ✓'))
   }
 
-  async function renameSelf() {
-    const v = prompt('Ad, Soyad:', userName)
-    if (!v?.trim()) return
-    const { error } = await supabase.auth.updateUser({ data: { full_name: v.trim() } })
+  async function saveAccount() {
+    setBusyAcc(true)
+    const { error } = await supabase.auth.updateUser({
+      data: { full_name: accName.trim(), phone: accPhone.trim() },
+    })
+    setBusyAcc(false)
     if (error) return flash(error.message)
-    setUserName(v.trim())
-    flash('Ad yeniləndi ✓')
+    setUserName(accName.trim())
+    flash('Hesab məlumatları saxlanıldı ✓')
   }
 
   async function signOut() {
@@ -365,11 +370,11 @@ export default function Dashboard() {
 
   // ---------- Render ----------
   if (!ready) {
-    return <div className="min-h-screen grid place-items-center text-slate-400 dark:text-slate-500">Yüklənir…</div>
+    return <div className="min-h-screen grid place-items-center bg-slate-100 dark:bg-slate-950 text-slate-400 dark:text-slate-500">Yüklənir…</div>
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-800/60">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 overflow-x-hidden">
       {/* ================= SIDEBAR ================= */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-transform duration-200 ${
@@ -378,10 +383,10 @@ export default function Dashboard() {
       >
         {/* Logo */}
         <div className="h-14 flex items-center gap-2.5 px-4 border-b border-slate-100 dark:border-slate-800">
-          <span className="w-8 h-8 rounded-lg bg-brand-600 text-white grid place-items-center font-black">
-            Q
+          <span className="w-8 h-8 rounded-lg bg-brand-600 grid place-items-center">
+            <Icon icon="lucide:qr-code" className="w-5 h-5 text-white" />
           </span>
-          <span className="font-black text-slate-800 dark:text-slate-100">Növbə</span>
+          <span className="font-black text-slate-800 dark:text-slate-100">QR Növbə</span>
         </div>
 
         {/* Filial seçimi */}
@@ -471,10 +476,10 @@ export default function Dashboard() {
               <Icon icon="lucide:menu" className="w-6 h-6" />
             </button>
             <div className="flex items-center gap-2 md:hidden">
-              <span className="w-7 h-7 rounded-lg bg-brand-600 text-white grid place-items-center text-sm font-black">
-                Q
+              <span className="w-7 h-7 rounded-lg bg-brand-600 grid place-items-center">
+                <Icon icon="lucide:qr-code" className="w-4 h-4 text-white" />
               </span>
-              <span className="font-black text-slate-800 dark:text-slate-100">Növbə</span>
+              <span className="font-black text-slate-800 dark:text-slate-100">QR Növbə</span>
             </div>
             <span className="hidden md:block text-sm text-slate-400 dark:text-slate-500">
               {NAV.find((n) => n.id === section)?.label ?? 'Tənzimləmələr'}
@@ -570,16 +575,6 @@ export default function Dashboard() {
                     </div>
                     <button
                       onClick={() => {
-                        renameSelf()
-                        setUserMenu(false)
-                      }}
-                      className="w-full text-left px-4 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 flex items-center gap-2"
-                    >
-                      <Icon icon="lucide:user" className="w-4 h-4" />
-                      Ad dəyiş
-                    </button>
-                    <button
-                      onClick={() => {
                         go('settings')
                         setUserMenu(false)
                       }}
@@ -603,7 +598,7 @@ export default function Dashboard() {
         </header>
 
         {/* ---- MƏZMUN ---- */}
-        <main className="flex-1 p-4 sm:p-6 min-w-0">
+        <main className="flex-1 p-4 sm:p-6 min-w-0 w-full max-w-5xl mx-auto">
           {!selected && section !== 'branches' ? (
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center text-slate-400 dark:text-slate-500">
               Sol menyu → Filial seçin (və ya «Filiallar» bölməsində yaradın)
@@ -616,8 +611,6 @@ export default function Dashboard() {
             <OperatorsSection />
           ) : section === 'display' ? (
             <DisplaySection />
-          ) : section === 'qr' ? (
-            <QrSection />
           ) : section === 'branches' ? (
             <BranchesSection />
           ) : section === 'services' ? (
@@ -721,7 +714,7 @@ export default function Dashboard() {
           Ziyarətçilər QR-u skan edir → nömrə alır → real-time izləyir. Bu link QR kodların içindədir.
         </p>
         <div className="flex flex-col sm:flex-row gap-6 items-start">
-          <div className="w-40 h-40 rounded-xl border border-slate-100 dark:border-slate-800 p-2 grid place-items-center shrink-0">
+          <div className="w-48 h-48 rounded-xl border border-slate-100 dark:border-slate-800 p-2 grid place-items-center bg-white dark:bg-slate-900 shrink-0">
             {qrDataUrl ? <img src={qrDataUrl} alt="QR" className="w-full h-full" /> : <span className="text-slate-300">…</span>}
           </div>
           <div className="space-y-3 min-w-0">
@@ -743,6 +736,13 @@ export default function Dashboard() {
                 className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
               >
                 Linki kopyala
+              </button>
+              <button
+                onClick={downloadQr}
+                className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 flex items-center gap-1.5"
+              >
+                <Icon icon="lucide:download" className="w-4 h-4" />
+                PNG yüklə
               </button>
             </div>
           </div>
@@ -812,41 +812,6 @@ export default function Dashboard() {
           <Icon icon="lucide:info" className="w-4 h-4 shrink-0" />
           Tam ekran üçün: F11 (Windows) / ⌃⌘F (Mac)
         </p>
-      </Card>
-    )
-  }
-
-  function QrSection() {
-    return (
-      <Card title="QR kod">
-        <div className="flex flex-col sm:flex-row gap-6 items-start">
-          <div className="w-56 h-56 rounded-2xl border border-slate-100 dark:border-slate-800 p-3 grid place-items-center bg-white dark:bg-slate-900 shrink-0">
-            {qrDataUrl ? <img src={qrDataUrl} alt="QR" className="w-full h-full" /> : <span className="text-slate-300">…</span>}
-          </div>
-          <div className="space-y-3 min-w-0">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Çap edib masaya/qarşılıqlı yerləşdirin. Ziyarətçi skan edəndə növbəyə qoşulur.
-            </p>
-            <code className="block break-all bg-slate-50 dark:bg-slate-800/40 rounded-lg px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
-              {queueUrl(selected!.slug)}
-            </code>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={downloadQr}
-                className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700"
-              >
-                <Icon icon="lucide:download" className="w-4 h-4 inline-block mr-1.5 -mt-0.5" />
-                PNG yüklə
-              </button>
-              <button
-                onClick={() => copy(queueUrl(selected!.slug))}
-                className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-              >
-                Linki kopyala
-              </button>
-            </div>
-          </div>
-        </div>
       </Card>
     )
   }
@@ -1016,8 +981,42 @@ export default function Dashboard() {
 
   function SettingsSection() {
     return (
-      <Card title="Tənzimləmələr">
-        <div className="space-y-4 max-w-md">
+      <div className="space-y-4 max-w-5xl mx-auto">
+        {/* Hesab */}
+        <Card title="Hesab">
+          <div className="space-y-4 max-w-md">
+            <div>
+              <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Ad Soyad</label>
+              <input
+                value={accName}
+                onChange={(e) => setAccName(e.target.value)}
+                placeholder="Məs. Əli Məmmədov"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm outline-none focus:border-brand-500 bg-white dark:bg-slate-900"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Mobil nömrə</label>
+              <input
+                value={accPhone}
+                onChange={(e) => setAccPhone(e.target.value)}
+                placeholder="Məs. +994 50 123 45 67"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm outline-none focus:border-brand-500 bg-white dark:bg-slate-900"
+              />
+            </div>
+            <button
+              onClick={saveAccount}
+              disabled={busyAcc}
+              className="rounded-xl bg-brand-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
+            >
+              {busyAcc ? 'Gözləyin…' : 'Saxla'}
+            </button>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Ad Soyad header-də və dropdown-da göstərilir.</p>
+          </div>
+        </Card>
+
+        {/* Filial */}
+        <Card title="Filial tənzimləmələri">
+          <div className="space-y-4 max-w-md">
           <div>
             <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Filial adı</label>
             <input
@@ -1051,7 +1050,8 @@ export default function Dashboard() {
             Saxla
           </button>
         </div>
-      </Card>
+        </Card>
+      </div>
     )
   }
 

@@ -46,8 +46,10 @@ export default function Landing() {
       <header className="border-b border-slate-100 dark:border-slate-800 sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur z-10">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 font-black text-lg">
-            <span className="w-8 h-8 rounded-lg bg-brand-600 text-white grid place-items-center">Q</span>
-            Növbə
+            <span className="w-8 h-8 rounded-lg bg-brand-600 grid place-items-center">
+              <Icon icon="lucide:qr-code" className="w-5 h-5 text-white" />
+            </span>
+            QR Növbə
           </div>
           <nav className="flex items-center gap-4 text-sm">
             <a href="#how" className="text-slate-500 dark:text-slate-400 hover:text-slate-800">Necə işləyir</a>
@@ -161,7 +163,7 @@ export default function Landing() {
       </section>
 
       <footer className="border-t border-slate-100 dark:border-slate-800 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
-        © {new Date().getFullYear()} Növbə — QR növbə idarəetmə sistemi
+        © {new Date().getFullYear()} QR Növbə — QR növbə idarəetmə sistemi
       </footer>
     </div>
   )
