@@ -1425,8 +1425,6 @@ function StatusBadge({ status }: { status: Ticket['status'] }) {
 
 // ================= Qrafiklər =================
 
-const PALETTE = ['#1b6ef5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16']
-
 function EmptyChart() {
   return (
     <div className="text-xs text-slate-400 dark:text-slate-500 text-center py-10">
@@ -1493,8 +1491,9 @@ function RadarChart({ items }: { items: { label: string; value: number }[] }) {
   )
 }
 
-/** Donut — operatorlara müraciət */
+/** Donut — operatorlara müraciət (monoton mavi, hover-da ad+pay) */
 function DonutChart({ items }: { items: { label: string; value: number }[] }) {
+  const [hover, setHover] = useState<number | null>(null)
   const real = items.some((i) => i.value > 0)
   const DEMO = [9, 6, 4, 3, 2, 2, 1, 1]
   const rows = real
@@ -1506,25 +1505,29 @@ function DonutChart({ items }: { items: { label: string; value: number }[] }) {
   const total = rows.reduce((a, b) => a + b.value, 0)
   if (total === 0) return <EmptyChart />
   const isDemo = !real
-  const R = 54
+  const CX = 80
+  const R = 56
   const CIRC = 2 * Math.PI * R
+  // Monoton mavi palitra — eyni ton, açıqdan tündə
+  const mono = (i: number) => `hsl(215 90% ${Math.round(62 - (i * 34) / Math.max(rows.length - 1, 1))}%)`
   let off = 0
   const segs = rows.map((it, i) => {
     const len = (it.value / total) * CIRC
-    const seg = { ...it, len, off, color: PALETTE[i % PALETTE.length] }
+    const seg = { ...it, len, off, color: mono(i) }
     off += len
     return seg
   })
+  const h = hover != null ? segs[hover] : null
   return (
-    <div className="flex items-center gap-5 flex-wrap justify-center sm:justify-start">
-      <svg viewBox="0 0 140 140" className="w-36 h-36 shrink-0">
-        <g transform="rotate(-90 70 70)">
+    <div className="flex flex-col items-center">
+      <svg viewBox="0 0 160 160" className="w-44 h-44">
+        <g transform={`rotate(-90 ${CX} ${CX})`}>
           <circle
-            cx="70"
-            cy="70"
+            cx={CX}
+            cy={CX}
             r={R}
             fill="none"
-            strokeWidth="22"
+            strokeWidth="24"
             className="stroke-slate-100 dark:stroke-slate-800"
           />
           {segs.map((s, i) => {
@@ -1532,42 +1535,54 @@ function DonutChart({ items }: { items: { label: string; value: number }[] }) {
             return (
               <circle
                 key={i}
-                cx="70"
-                cy="70"
+                cx={CX}
+                cy={CX}
                 r={R}
                 fill="none"
-                strokeWidth="22"
+                strokeWidth={hover === i ? 30 : 24}
                 stroke={s.color}
                 strokeDasharray={`${adj} ${CIRC - adj}`}
                 strokeDashoffset={-s.off}
+                className="cursor-pointer transition-all"
+                onMouseEnter={() => setHover(i)}
+                onMouseLeave={() => setHover(null)}
               />
             )
           })}
         </g>
-        <text x="70" y="68" textAnchor="middle" className="fill-slate-800 dark:fill-slate-100 text-2xl font-black">
-          {total}
-        </text>
-        <text x="70" y="84" textAnchor="middle" className="fill-slate-400 dark:fill-slate-500 text-[9px]">
-          müraciət
-        </text>
-      </svg>
-      <div className="space-y-1.5 min-w-[150px]">
-        {segs.map((s, i) => (
-          <div key={i} className="flex items-center gap-2 text-sm">
-            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
-            <span className="text-slate-600 dark:text-slate-300 truncate max-w-[110px]">{s.label}</span>
-            <span className="ml-auto font-semibold text-slate-800 dark:text-slate-100 tabular-nums">{s.value}</span>
-            <span className="text-xs text-slate-400 dark:text-slate-500 w-9 text-right tabular-nums">
-              {Math.round((s.value / total) * 100)}%
-            </span>
-          </div>
-        ))}
-        {isDemo && (
-          <p className="text-[10px] text-slate-400 dark:text-slate-500 pt-1">
-            Nümunə görüntü — bugün hələ çağırış yoxdur. Operator paneldə «Növbəti» basan kimi real rəqəmlər görünəcək.
-          </p>
+        {h ? (
+          <>
+            <text x={CX} y="68" textAnchor="middle" className="fill-slate-500 dark:fill-slate-400 text-[10px] font-semibold">
+              {h.label.length > 14 ? `${h.label.slice(0, 13)}…` : h.label}
+            </text>
+            <text x={CX} y="94" textAnchor="middle" className="fill-slate-800 dark:fill-slate-100 text-3xl font-black tabular-nums">
+              {h.value}
+            </text>
+            <text x={CX} y="112" textAnchor="middle" className="fill-slate-400 dark:fill-slate-500 text-[10px]">
+              {Math.round((h.value / total) * 100)}% pay
+            </text>
+          </>
+        ) : (
+          <>
+            <text x={CX} y="80" textAnchor="middle" className="fill-slate-800 dark:fill-slate-100 text-3xl font-black tabular-nums">
+              {total}
+            </text>
+            <text x={CX} y="98" textAnchor="middle" className="fill-slate-400 dark:fill-slate-500 text-[10px]">
+              müraciət
+            </text>
+          </>
         )}
-      </div>
+      </svg>
+      {isDemo && (
+        <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-1 max-w-[220px]">
+          Nümunə görüntü — bugün hələ çağırış yoxdur. Operator paneldə «Növbəti» basan kimi real rəqəmlər görünəcək.
+        </p>
+      )}
+      {!isDemo && (
+        <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-1">
+          Dilimlərin üzərinə gəl — ad, say və pay görünür
+        </p>
+      )}
     </div>
   )
 }
