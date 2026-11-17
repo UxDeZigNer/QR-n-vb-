@@ -1505,8 +1505,8 @@ function DonutChart({ items }: { items: { label: string; value: number }[] }) {
   const total = rows.reduce((a, b) => a + b.value, 0)
   if (total === 0) return <EmptyChart />
   const isDemo = !real
-  const CX = 80
-  const R = 56
+  const CX = 90
+  const R = 64
   const CIRC = 2 * Math.PI * R
   // Monoton mavi palitra — eyni ton, açıqdan tündə
   const mono = (i: number) => `hsl(215 90% ${Math.round(62 - (i * 34) / Math.max(rows.length - 1, 1))}%)`
@@ -1519,8 +1519,8 @@ function DonutChart({ items }: { items: { label: string; value: number }[] }) {
   })
   const h = hover != null ? segs[hover] : null
   return (
-    <div className="flex flex-col items-center">
-      <svg viewBox="0 0 160 160" className="w-44 h-44">
+    <div className="flex flex-col items-center justify-center">
+      <svg viewBox="0 0 180 180" className="w-56 h-56 max-w-full">
         <g transform={`rotate(-90 ${CX} ${CX})`}>
           <circle
             cx={CX}
@@ -1552,34 +1552,34 @@ function DonutChart({ items }: { items: { label: string; value: number }[] }) {
         </g>
         {h ? (
           <>
-            <text x={CX} y="68" textAnchor="middle" className="fill-slate-500 dark:fill-slate-400 text-[10px] font-semibold">
+            <text x={CX} y="76" textAnchor="middle" className="fill-slate-500 dark:fill-slate-400 text-[11px] font-semibold">
               {h.label.length > 14 ? `${h.label.slice(0, 13)}…` : h.label}
             </text>
-            <text x={CX} y="94" textAnchor="middle" className="fill-slate-800 dark:fill-slate-100 text-3xl font-black tabular-nums">
+            <text x={CX} y="104" textAnchor="middle" className="fill-slate-800 dark:fill-slate-100 text-4xl font-black tabular-nums">
               {h.value}
             </text>
-            <text x={CX} y="112" textAnchor="middle" className="fill-slate-400 dark:fill-slate-500 text-[10px]">
+            <text x={CX} y="124" textAnchor="middle" className="fill-slate-400 dark:fill-slate-500 text-[11px]">
               {Math.round((h.value / total) * 100)}% pay
             </text>
           </>
         ) : (
           <>
-            <text x={CX} y="80" textAnchor="middle" className="fill-slate-800 dark:fill-slate-100 text-3xl font-black tabular-nums">
+            <text x={CX} y="90" textAnchor="middle" className="fill-slate-800 dark:fill-slate-100 text-4xl font-black tabular-nums">
               {total}
             </text>
-            <text x={CX} y="98" textAnchor="middle" className="fill-slate-400 dark:fill-slate-500 text-[10px]">
+            <text x={CX} y="110" textAnchor="middle" className="fill-slate-400 dark:fill-slate-500 text-[11px]">
               müraciət
             </text>
           </>
         )}
       </svg>
       {isDemo && (
-        <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-1 max-w-[220px]">
+        <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-4 max-w-[240px]">
           Nümunə görüntü — bugün hələ çağırış yoxdur. Operator paneldə «Növbəti» basan kimi real rəqəmlər görünəcək.
         </p>
       )}
       {!isDemo && (
-        <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-1">
+        <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-4">
           Dilimlərin üzərinə gəl — ad, say və pay görünür
         </p>
       )}
