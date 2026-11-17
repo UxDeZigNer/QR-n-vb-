@@ -674,7 +674,7 @@ export default function Dashboard() {
         <div className="grid sm:grid-cols-3 gap-3">
           <QuickBtn href={panelUrl(selected!.slug)} icon="lucide:list-checks" title="Operator paneli" desc="Növbəti / Geri çağır" />
           <QuickBtn href={displayUrl(selected!.slug)} icon="lucide:monitor" title="Gözləmə ekranı" desc="TV üçün" external />
-          <QuickBtn href={queueUrl(selected!.slug)} icon="lucide:qr-code" title="QR kodlar" desc="QR skan → nömrə" external />
+          <QuickBtn href={queueUrl(selected!.slug)} icon="lucide:qr-code" title="Skan səhifəsi" desc="QR oxuyanda açılan səhifə" external />
         </div>
 
         {/* 7 günlük qrafik */}
