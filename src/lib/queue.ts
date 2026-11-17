@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { Branch, BranchLive, Service, Ticket } from './types'
+import type { Branch, BranchLive, Operator, Service, Ticket } from './types'
 
 /** Ziyarətçi növbəyə qoşulur — atomik RPC, yarış şəraiti yoxdur */
 export async function joinQueue(opts: {
@@ -18,9 +18,12 @@ export async function joinQueue(opts: {
   return data as Ticket
 }
 
-/** Operator: növbətini çağır */
-export async function callNext(branchId: string): Promise<Ticket | null> {
-  const { data, error } = await supabase.rpc('call_next', { p_branch_id: branchId })
+/** Operator: növbətini çağır (seçilən əməkdaşa bağlanır) */
+export async function callNext(branchId: string, operatorId?: string | null): Promise<Ticket | null> {
+  const { data, error } = await supabase.rpc('call_next', {
+    p_branch_id: branchId,
+    p_operator_id: operatorId ?? null,
+  })
   if (error) {
     if (error.message.includes('gözləyən yoxdur')) return null
     throw new Error(error.message)
@@ -33,6 +36,35 @@ export async function recallTicket(ticketId: string): Promise<Ticket> {
   const { data, error } = await supabase.rpc('recall_ticket', { p_ticket_id: ticketId })
   if (error) throw new Error(error.message)
   return data as Ticket
+}
+
+/** Nömrəni xidmətə / əməkdaşa yönləndir */
+export async function redirectTicket(opts: {
+  ticketId: string
+  serviceId?: string | null
+  operatorId?: string | null
+  backToQueue?: boolean
+}): Promise<Ticket> {
+  const { data, error } = await supabase.rpc('redirect_ticket', {
+    p_ticket_id: opts.ticketId,
+    p_service_id: opts.serviceId ?? null,
+    p_operator_id: opts.operatorId ?? null,
+    p_back_to_queue: opts.backToQueue ?? false,
+  })
+  if (error) throw new Error(error.message)
+  return data as Ticket
+}
+
+/** Filialın operatorları */
+export async function getOperators(branchId: string): Promise<Operator[]> {
+  const { data, error } = await supabase
+    .from('operators')
+    .select('*')
+    .eq('branch_id', branchId)
+    .eq('is_active', true)
+    .order('name')
+  if (error) throw new Error(error.message)
+  return (data ?? []) as Operator[]
 }
 
 /** Filialı slug ilə tap */

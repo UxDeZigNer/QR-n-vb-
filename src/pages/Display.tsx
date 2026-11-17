@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { getCurrent, getLive, getWaiting, subscribeBranch } from '../lib/queue'
+import { getCurrent, getLive, getOperators, getServices, getWaiting, subscribeBranch } from '../lib/queue'
 import { supabase } from '../lib/supabase'
 import type { Branch, Ticket } from '../lib/types'
 
@@ -11,6 +11,8 @@ export default function Display() {
   const [waiting, setWaiting] = useState<Ticket[]>([])
   const [waitingCount, setWaitingCount] = useState(0)
   const [now, setNow] = useState(new Date())
+  const [svcName, setSvcName] = useState<Record<string, string>>({})
+  const [opName, setOpName] = useState<Record<string, string>>({})
 
   const refresh = useCallback(async (branchId: string) => {
     const [c, w, live] = await Promise.all([
@@ -30,10 +32,15 @@ export default function Display() {
       .select('*')
       .eq('slug', slug)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (data) {
           setBranch(data as Branch)
           void refresh(data.id)
+          // Xidmət / operator adları
+          const b = data as Branch
+          const [svcs, ops] = await Promise.all([getServices(b.id), getOperators(b.id)])
+          setSvcName(Object.fromEntries(svcs.map((s) => [s.id, s.name])))
+          setOpName(Object.fromEntries(ops.map((o) => [o.id, o.name])))
         }
       })
   }, [slug, refresh])
@@ -84,6 +91,16 @@ export default function Display() {
           <div className="text-2xl opacity-80">
             {current?.visitor_name ?? 'Xəstə/Müştəri nömrəsi'}
           </div>
+          {current && (current.service_id || current.operator_id) && (
+            <div className="mt-2 text-lg opacity-70">
+              {[
+                current.service_id ? svcName[current.service_id] : null,
+                current.operator_id ? opName[current.operator_id] : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </div>
+          )}
           {current?.called_at && (
             <div className="mt-3 text-sm opacity-60">
               Çağırıldı:{' '}

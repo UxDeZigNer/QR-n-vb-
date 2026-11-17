@@ -453,6 +453,11 @@ export default function Dashboard() {
                           {t.visitor_name && (
                             <span className="text-slate-400 text-xs">{t.visitor_name}</span>
                           )}
+                          {t.operator_id && (
+                            <span className="text-xs text-brand-600">
+                              {operators.find((o) => o.id === t.operator_id)?.name ?? ''}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <StatusBadge status={t.status} />

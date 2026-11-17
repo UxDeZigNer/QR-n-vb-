@@ -156,7 +156,9 @@ export default function Visitor() {
     )
   }
 
-  const activeService = services.find((s) => s.id === serviceId)
+  const activeService = services.find(
+    (s) => s.id === (myTicket?.service_id ?? serviceId),
+  )
   const ahead = myTicket && myTicket.status === 'waiting'
     ? Math.max(0, myTicket.seq - (currentCode ? parseInt(currentCode.split('-')[1] ?? '0', 10) : 0) - 1)
     : 0
@@ -251,6 +253,11 @@ export default function Visitor() {
                 {myTicket.status === 'done' && 'Xidmətiniz tamamlandı ✓'}
                 {myTicket.status === 'skipped' && 'Nömrəniz buraxıldı'}
               </div>
+              {activeService && (
+                <div className="mt-2 inline-block rounded-full bg-white/20 px-3 py-1 text-sm">
+                  Xidmət: {activeService.name}
+                </div>
+              )}
             </div>
 
             {myTicket.status === 'waiting' && (

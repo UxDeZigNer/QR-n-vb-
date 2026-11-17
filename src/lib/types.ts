@@ -41,6 +41,7 @@ export interface Ticket {
   id: string
   branch_id: string
   service_id: string | null
+  operator_id: string | null
   code: string
   seq: number
   status: TicketStatus
