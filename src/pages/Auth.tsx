@@ -39,16 +39,16 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen bg-brand-50 grid place-items-center px-6">
+    <div className="min-h-screen bg-brand-50 dark:bg-slate-950 grid place-items-center px-6">
       <div className="w-full max-w-sm">
-        <a href="#/" className="text-sm text-slate-500 hover:text-slate-700">
+        <a href="#/" className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700">
           ← Ana səhifə
         </a>
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 mt-3 shadow-sm">
-          <h1 className="text-xl font-bold text-slate-800">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 mt-3 shadow-sm">
+          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">
             {mode === 'login' ? 'Daxil ol' : 'Hesab yarat'}
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             {mode === 'login' ? 'Növbə panelinə giriş' : 'Növbə sisteminizi bir neçə dəqiqəyə qurun'}
           </p>
 
@@ -59,7 +59,7 @@ export default function Auth() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="E-poçt"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-brand-500"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 outline-none focus:border-brand-500"
             />
             <input
               type="password"
@@ -68,7 +68,7 @@ export default function Auth() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Şifrə"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-brand-500"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5 outline-none focus:border-brand-500"
             />
 
             {error && <div className="text-sm text-red-600">{error}</div>}
@@ -84,7 +84,7 @@ export default function Auth() {
 
           <button
             onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
-            className="w-full text-sm text-slate-500 hover:text-slate-700 mt-4"
+            className="w-full text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 mt-4"
           >
             {mode === 'login' ? 'Hesab yoxdur? Qeydiyyat' : 'Hesab var? Daxil ol'}
           </button>

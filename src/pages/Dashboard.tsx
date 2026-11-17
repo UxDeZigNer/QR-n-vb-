@@ -2,41 +2,111 @@ import { useCallback, useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { supabase } from '../lib/supabase'
 import { subscribeBranch } from '../lib/queue'
+import { getStoredTheme, toggleTheme, type Theme } from '../lib/theme'
 import type { Branch, BranchLive, Operator, Service, Ticket } from '../lib/types'
 
 const APP_URL = import.meta.env.VITE_APP_URL ?? window.location.origin + import.meta.env.BASE_URL
-
 const queueUrl = (slug: string) => `${APP_URL}#/q/${slug}`
 const panelUrl = (slug: string) => `${APP_URL}#/panel/${slug}`
 const displayUrl = (slug: string) => `${APP_URL}#/display/${slug}`
 
+type Section =
+  | 'dashboard'
+  | 'visitor'
+  | 'operators'
+  | 'display'
+  | 'qr'
+  | 'branches'
+  | 'services'
+  | 'history'
+  | 'settings'
+
+const NAV: { id: Section; label: string; icon: string }[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+  { id: 'visitor', label: 'Ziyarətçi səhifəsi', icon: '📱' },
+  { id: 'operators', label: 'Operatorlar', icon: '👷' },
+  { id: 'display', label: 'Gözləmə zalı ekranı', icon: '🖥' },
+  { id: 'qr', label: 'QR kodlar', icon: '⬛' },
+  { id: 'branches', label: 'Filiallar', icon: '🏢' },
+  { id: 'services', label: 'Xidmətlər', icon: '🛎' },
+  { id: 'history', label: 'Ziyarətçilər', icon: '📋' },
+]
+
+const STATUS: Record<Ticket['status'], { t: string; c: string }> = {
+  waiting: { t: 'gözləyir', c: 'bg-slate-100 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400' },
+  called: { t: 'çağırıldı', c: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
+  serving: { t: 'xidmətdə', c: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+  done: { t: 'bitdi', c: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
+  skipped: { t: 'buraxıldı', c: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300' },
+}
+
+const DOW = ['Baz', 'B.e', 'Ç.a', 'Çər', 'C.a', 'Cü', 'Şən']
+
+const localDayStart = (dateStr: string) => new Date(`${dateStr}T00:00:00`)
+const iso = (d: Date) => d.toISOString()
+const dateInput = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
 export default function Dashboard() {
+  // ---- Auth / org / filiallar ----
   const [ready, setReady] = useState(false)
+  const [userEmail, setEmail] = useState('')
   const [branches, setBranches] = useState<Branch[]>([])
   const [selected, setSelected] = useState<Branch | null>(null)
 
-  // Filiala bağlı məlumatlar
-  const [live, setLive] = useState<BranchLive | null>(null)
-  const [services, setServices] = useState<Service[]>([])
-  const [operators, setOperators] = useState<Operator[]>([])
-  const [recent, setRecent] = useState<Ticket[]>([])
-  const [todayCount, setTodayCount] = useState(0)
-  const [avgWait, setAvgWait] = useState(0)
-  const [qrDataUrl, setQrDataUrl] = useState('')
-
-  // Formalar
-  const [newBranch, setNewBranch] = useState('')
-  const [newService, setNewService] = useState('')
-  const [newServiceMin, setNewServiceMin] = useState(5)
-  const [newOperator, setNewOperator] = useState('')
+  // ---- UI ----
+  const [section, setSection] = useState<Section>(() => {
+    const m = window.location.hash.match(/\/dashboard\/([a-z]+)/)
+    return (m?.[1] as Section) ?? 'dashboard'
+  })
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [userMenu, setUserMenu] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const [theme, setTheme] = useState<Theme>(getStoredTheme)
 
   const flash = (m: string) => {
     setMsg(m)
     setTimeout(() => setMsg(null), 2500)
   }
 
-  // ---- Filialların yüklənməsi ----
+  const go = (s: Section) => {
+    setSection(s)
+    setSidebarOpen(false)
+    window.location.hash = s === 'dashboard' ? '/dashboard' : `/dashboard/${s}`
+  }
+
+  useEffect(() => {
+    const onHash = () => {
+      const m = window.location.hash.match(/\/dashboard\/([a-z]+)/)
+      setSection((m?.[1] as Section) ?? 'dashboard')
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
+  // ---- Filiala bağlı data ----
+  const [live, setLive] = useState<BranchLive | null>(null)
+  const [services, setServices] = useState<Service[]>([])
+  const [operators, setOperators] = useState<Operator[]>([])
+  const [recent, setRecent] = useState<Ticket[]>([])
+  const [todayCount, setTodayCount] = useState(0)
+  const [avgWait, setAvgWait] = useState(0)
+  const [week, setWeek] = useState<{ label: string; count: number }[]>([])
+  const [qrDataUrl, setQrDataUrl] = useState('')
+
+  // ---- Ziyarətçi tarixçəsi ----
+  const todayStr = dateInput(new Date())
+  const [from, setFrom] = useState(todayStr)
+  const [to, setTo] = useState(todayStr)
+  const [historyRows, setHistoryRows] = useState<Ticket[]>([])
+
+  // ---- Tənzimləmələr ----
+  const [cfgName, setCfgName] = useState('')
+  const [cfgAddress, setCfgAddress] = useState('')
+  const [cfgPrefix, setCfgPrefix] = useState('A')
+
+  // ---------- Data yükləmə ----------
   const loadBranches = useCallback(async (org: string) => {
     const { data } = await supabase
       .from('branches')
@@ -47,12 +117,82 @@ export default function Dashboard() {
     return (data ?? []) as Branch[]
   }, [])
 
+  const loadDetail = useCallback(async (b: Branch) => {
+    const dayStart = localDayStart(dateInput(new Date()))
+    const weekStart = new Date()
+    weekStart.setDate(weekStart.getDate() - 6)
+    weekStart.setHours(0, 0, 0, 0)
+
+    const [liveRes, svcRes, opRes, todayRes, weekRes] = await Promise.all([
+      supabase.from('branch_live').select('*').eq('branch_id', b.id).maybeSingle(),
+      supabase.from('services').select('*').eq('branch_id', b.id).order('sort_order'),
+      supabase.from('operators').select('*').eq('branch_id', b.id).order('name'),
+      supabase
+        .from('tickets')
+        .select('*')
+        .eq('branch_id', b.id)
+        .gte('joined_at', iso(dayStart))
+        .order('seq', { ascending: false })
+        .limit(10),
+      supabase
+        .from('tickets')
+        .select('joined_at, called_at')
+        .eq('branch_id', b.id)
+        .gte('joined_at', iso(weekStart)),
+    ])
+
+    setLive(liveRes.data as BranchLive | null)
+    setServices((svcRes.data ?? []) as Service[])
+    setOperators((opRes.data ?? []) as Operator[])
+
+    const todays = (todayRes.data ?? []) as Ticket[]
+    setRecent(todays)
+    setTodayCount(todays.length)
+
+    const waits = todays
+      .filter((t) => t.called_at)
+      .map((t) => (new Date(t.called_at!).getTime() - new Date(t.joined_at).getTime()) / 60000)
+    setAvgWait(waits.length ? Math.round(waits.reduce((a, b2) => a + b2, 0) / waits.length) : 0)
+
+    // 7 günlük qrafik
+    const counts = new Array(7).fill(0)
+    for (const t of ((weekRes.data ?? []) as Ticket[])) {
+      const d = new Date(t.joined_at)
+      d.setHours(0, 0, 0, 0)
+      const idx = Math.round((d.getTime() - weekStart.getTime()) / 86400000)
+      if (idx >= 0 && idx < 7) counts[idx]++
+    }
+    setWeek(counts.map((count, i) => {
+      const d = new Date(weekStart)
+      d.setDate(d.getDate() + i)
+      return { label: DOW[d.getDay()], count }
+    }))
+
+    QRCode.toDataURL(queueUrl(b.slug), { width: 600, margin: 2 })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(''))
+  }, [])
+
+  const openBranch = useCallback(
+    (b: Branch) => {
+      setSelected(b)
+      localStorage.setItem('qrm_branch', b.id)
+      setCfgName(b.name)
+      setCfgAddress(b.address ?? '')
+      setCfgPrefix(b.prefix)
+      void loadDetail(b)
+    },
+    [loadDetail],
+  )
+
+  // Sessiya
   useEffect(() => {
     void supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) {
         window.location.hash = '/auth'
         return
       }
+      setEmail(data.session.user.email ?? '')
       const uid = data.session.user.id
 
       let { data: org } = await supabase.from('orgs').select('*').eq('owner_id', uid).maybeSingle()
@@ -66,98 +206,68 @@ export default function Dashboard() {
       }
       if (org) {
         const list = await loadBranches(org.id)
-        if (list.length > 0) void openBranch(list[0])
+        const savedId = localStorage.getItem('qrm_branch')
+        const restore = list.find((b) => b.id === savedId) ?? list[0]
+        if (restore) openBranch(restore)
       }
       setReady(true)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ---- Seçili filialın bütün məlumatları ----
-  const loadDetail = useCallback(async (b: Branch) => {
-    const startOfDay = new Date()
-    startOfDay.setHours(0, 0, 0, 0)
-
-    const [liveRes, svcRes, opRes, recentRes, countRes] = await Promise.all([
-      supabase.from('branch_live').select('*').eq('branch_id', b.id).maybeSingle(),
-      supabase.from('services').select('*').eq('branch_id', b.id).order('sort_order'),
-      supabase.from('operators').select('*').eq('branch_id', b.id).order('name'),
-      supabase
-        .from('tickets')
-        .select('*')
-        .eq('branch_id', b.id)
-        .gte('joined_at', startOfDay.toISOString())
-        .order('seq', { ascending: false })
-        .limit(15),
-      supabase
-        .from('tickets')
-        .select('joined_at, called_at, done_at', { count: 'exact', head: true })
-        .eq('branch_id', b.id)
-        .gte('joined_at', startOfDay.toISOString()),
-    ])
-
-    setLive(liveRes.data as BranchLive | null)
-    setServices((svcRes.data ?? []) as Service[])
-    setOperators((opRes.data ?? []) as Operator[])
-    setRecent((recentRes.data ?? []) as Ticket[])
-    setTodayCount(countRes.count ?? 0)
-
-    // Orta gözləmə: joined -> called fərqi (çağırılmışlar üzərində)
-    const rows = (recentRes.data ?? []) as Ticket[]
-    const waits = rows
-      .filter((t) => t.called_at)
-      .map((t) => (new Date(t.called_at!).getTime() - new Date(t.joined_at).getTime()) / 60000)
-    setAvgWait(waits.length ? Math.round(waits.reduce((a, b2) => a + b2, 0) / waits.length) : 0)
-
-    QRCode.toDataURL(queueUrl(b.slug), { width: 600, margin: 2 })
-      .then(setQrDataUrl)
-      .catch(() => setQrDataUrl(''))
-  }, [])
-
-  const openBranch = useCallback(
-    (b: Branch) => {
-      setSelected(b)
-      void loadDetail(b)
-    },
-    [loadDetail],
-  )
-
-  // ---- Real-time ----
+  // Realtime
   useEffect(() => {
     if (!selected) return
     return subscribeBranch(selected.id, () => void loadDetail(selected))
   }, [selected, loadDetail])
 
-  // ---- Əməliyyatlar ----
+  // Ziyarətçi tarixçəsi
+  useEffect(() => {
+    if (!selected || section !== 'history') return
+    const end = new Date(`${to}T23:59:59.999`)
+    void supabase
+      .from('tickets')
+      .select('*')
+      .eq('branch_id', selected.id)
+      .gte('joined_at', iso(localDayStart(from)))
+      .lte('joined_at', iso(end))
+      .order('joined_at', { ascending: false })
+      .limit(300)
+      .then(({ data }) => setHistoryRows((data ?? []) as Ticket[]))
+  }, [selected, section, from, to])
+
+  // ---------- Əməliyyatlar ----------
   async function createBranch() {
-    if (!newBranch.trim()) return
-    const base = newBranch.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'filial'
+    const name = prompt('Yeni filialın adı:')
+    if (!name?.trim()) return
+    const base = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'filial'
     const slug = `${base}-${Math.random().toString(36).slice(2, 6)}`
     const { data: org } = await supabase.from('orgs').select('id').limit(1).maybeSingle()
-    if (!org) return flash('Təşkilat tapılmadı')
+    if (!org) return
     const { data, error } = await supabase
       .from('branches')
-      .insert({ org_id: org.id, name: newBranch.trim(), slug, prefix: 'A' })
+      .insert({ org_id: org.id, name: name.trim(), slug, prefix: 'A' })
       .select()
       .single()
     if (error) return flash(error.message)
-    setNewBranch('')
     const list = await loadBranches(org.id)
-    setBranches(list)
     openBranch(data as Branch)
+    void loadBranches(org.id)
+    setBranches(list)
     flash('Filial yaradıldı ✓')
   }
 
   async function addService() {
-    if (!selected || !newService.trim()) return
+    const name = prompt('Xidmət adı (məs. Kassir):')
+    if (!name?.trim() || !selected) return
+    const avg = Number(prompt('Orta vaxt (dəqiqə):', '5') ?? 5) || 5
     const { error } = await supabase.from('services').insert({
       branch_id: selected.id,
-      name: newService.trim(),
-      avg_minutes: newServiceMin,
+      name: name.trim(),
+      avg_minutes: avg,
       sort_order: services.length,
     })
     if (error) return flash(error.message)
-    setNewService('')
     await loadDetail(selected)
     flash('Xidmət əlavə olundu ✓')
   }
@@ -168,12 +278,12 @@ export default function Dashboard() {
   }
 
   async function addOperator() {
-    if (!selected || !newOperator.trim()) return
+    const name = prompt('Operator adı:')
+    if (!name?.trim() || !selected) return
     const { error } = await supabase
       .from('operators')
-      .insert({ branch_id: selected.id, name: newOperator.trim() })
+      .insert({ branch_id: selected.id, name: name.trim() })
     if (error) return flash(error.message)
-    setNewOperator('')
     await loadDetail(selected)
     flash('Operator əlavə olundu ✓')
   }
@@ -183,12 +293,28 @@ export default function Dashboard() {
     if (selected) await loadDetail(selected)
   }
 
+  async function saveSettings() {
+    if (!selected) return
+    const { error } = await supabase
+      .from('branches')
+      .update({ name: cfgName, address: cfgAddress, prefix: cfgPrefix })
+      .eq('id', selected.id)
+    if (error) return flash(error.message)
+    await loadBranches((await supabase.from('orgs').select('id').limit(1).maybeSingle()).data!.id)
+    openBranch({ ...selected, name: cfgName, address: cfgAddress, prefix: cfgPrefix })
+    flash('Saxlanıldı ✓')
+  }
+
   function downloadQr() {
-    if (!qrDataUrl || !selected) return
+    if (!qrDataUrl) return
     const a = document.createElement('a')
     a.href = qrDataUrl
-    a.download = `qr-${selected.slug}.png`
+    a.download = `qr-${selected?.slug ?? 'novbe'}.png`
     a.click()
+  }
+
+  function copy(text: string) {
+    void navigator.clipboard.writeText(text).then(() => flash('Kopyalandı ✓'))
   }
 
   async function signOut() {
@@ -196,352 +322,778 @@ export default function Dashboard() {
     window.location.hash = '/'
   }
 
+  function exportCsv() {
+    const head = ['Kod', 'Ad', 'Status', 'Xidmət', 'Əməkdaş', 'Qoşuldu', 'Çağırıldı', 'Bitdi']
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const lines = historyRows.map((t) =>
+      [
+        t.code,
+        t.visitor_name ?? '',
+        STATUS[t.status].t,
+        services.find((s) => s.id === t.service_id)?.name ?? '',
+        operators.find((o) => o.id === t.operator_id)?.name ?? '',
+        new Date(t.joined_at).toLocaleString('az-AZ'),
+        t.called_at ? new Date(t.called_at).toLocaleString('az-AZ') : '',
+        t.done_at ? new Date(t.done_at).toLocaleString('az-AZ') : '',
+      ]
+        .map(esc)
+        .join(','),
+    )
+    const blob = new Blob(['\uFEFF' + [head.map(esc).join(','), ...lines].join('\n')], {
+      type: 'text/csv;charset=utf-8',
+    })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `ziyaretler-${from}_${to}.csv`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
+  // ---------- Render ----------
   if (!ready) {
-    return <div className="min-h-screen grid place-items-center text-slate-400">Yüklənir…</div>
+    return <div className="min-h-screen grid place-items-center text-slate-400 dark:text-slate-500">Yüklənir…</div>
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Başlıq */}
-      <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 font-black text-lg shrink-0">
-            <span className="w-8 h-8 rounded-lg bg-brand-600 text-white grid place-items-center">Q</span>
-            <span className="hidden sm:inline">Növbə</span>
-          </div>
-
-          {/* Filial seçimi */}
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <select
-              value={selected?.id ?? ''}
-              onChange={(e) => {
-                const b = branches.find((x) => x.id === e.target.value)
-                if (b) openBranch(b)
-              }}
-              className="min-w-0 max-w-[220px] flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-brand-500 bg-white cursor-pointer"
-            >
-              {branches.length === 0 && <option value="">Filial yoxdur</option>}
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name} {b.id === selected?.id && live ? `(${live.waiting_count})` : ''}
-                </option>
-              ))}
-            </select>
-
-            {/* Yeni filial */}
-            <input
-              value={newBranch}
-              onChange={(e) => setNewBranch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && createBranch()}
-              placeholder="Yeni filial"
-              className="min-w-0 w-28 sm:w-40 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
-            />
-            <button
-              onClick={createBranch}
-              className="shrink-0 rounded-xl bg-brand-600 text-white w-10 h-10 font-bold hover:bg-brand-700"
-              title="Filial yarat"
-            >
-              +
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            {msg && <span className="text-sm text-emerald-600">{msg}</span>}
-            <button onClick={signOut} className="text-sm text-slate-500 hover:text-slate-700">
-              Çıxış
-            </button>
-          </div>
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-800/60">
+      {/* ================= SIDEBAR ================= */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-transform duration-200 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } md:translate-x-0`}
+      >
+        {/* Logo */}
+        <div className="h-14 flex items-center gap-2.5 px-4 border-b border-slate-100 dark:border-slate-800">
+          <span className="w-8 h-8 rounded-lg bg-brand-600 text-white grid place-items-center font-black">
+            Q
+          </span>
+          <span className="font-black text-slate-800 dark:text-slate-100">Növbə</span>
         </div>
-      </header>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 min-w-0">
+        {/* Filial seçimi */}
+        <div className="px-3 pt-3">
+          <div className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-1 mb-1">
+            Filial
+          </div>
+          <select
+            value={selected?.id ?? ''}
+            onChange={(e) => {
+              const b = branches.find((x) => x.id === e.target.value)
+              if (b) openBranch(b)
+            }}
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 outline-none focus:border-brand-500 bg-slate-50 dark:bg-slate-800/40"
+          >
+            {branches.length === 0 && <option value="">Filial yoxdur</option>}
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        {/* ---- Sağ: seçili filialın dashboard-u ---- */}
-        <main className="space-y-4 min-w-0">
-          {!selected ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-400">
-              Filial seçin →
-            </div>
-          ) : (
-            <>
-              {/* Başlıq + canlı status */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <h1 className="text-xl font-black text-slate-800">{selected.name}</h1>
-                  <div className="text-sm text-slate-400">/{selected.slug} · prefiks {selected.prefix}</div>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 rounded-full px-3 py-1.5 font-medium">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    Canlı
-                  </span>
-                  <span className="bg-slate-100 text-slate-600 rounded-full px-3 py-1.5">
-                    {live?.waiting_count ?? 0} gözləyir
-                  </span>
-                </div>
-              </div>
-
-              {/* Statistika kartları */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <Stat
-                  label="Hazırda çağırılan"
-                  value={live?.current_code ?? '—'}
-                  accent
-                />
-                <Stat label="Gözləyən" value={`${live?.waiting_count ?? 0} nəfər`} />
-                <Stat label="Bugünkü ziyarət" value={`${todayCount}`} />
-                <Stat label="Orta gözləmə" value={avgWait ? `${avgWait} dəq` : '—'} />
-              </div>
-
-              {/* Sürətli keçidlər */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <QuickLink
-                  href={queueUrl(selected.slug)}
-                  icon="📱"
-                  title="Ziyarətçi səhifəsi"
-                  desc="QR skan → nömrə"
-                  external
-                />
-                <QuickLink
-                  href={panelUrl(selected.slug)}
-                  icon="⚙"
-                  title="Operator paneli"
-                  desc="Növbəti / Geri çağır"
-                  external
-                />
-                <QuickLink
-                  href={displayUrl(selected.slug)}
-                  icon="🖥"
-                  title="Gözləmə zalı ekranı"
-                  desc="TV / monitor üçün"
-                  external
-                />
-                <button
-                  onClick={downloadQr}
-                  className="rounded-2xl border border-slate-200 bg-white p-4 text-left hover:border-brand-400 transition"
+        {/* Menyu */}
+        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
+          {NAV.map((n) => (
+            <button
+              key={n.id}
+              onClick={() => go(n.id)}
+              className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${
+                section === n.id
+                  ? 'bg-brand-600 text-white font-semibold shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              <span className="text-base w-5 text-center">{n.icon}</span>
+              {n.label}
+              {n.id === 'dashboard' && selected && (
+                <span
+                  className={`ml-auto text-xs rounded-full px-1.5 py-0.5 ${
+                    section === n.id ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400'
+                  }`}
                 >
-                  <div className="text-2xl">⬇</div>
-                  <div className="font-semibold text-slate-800 text-sm mt-1">QR yüklə</div>
-                  <div className="text-xs text-slate-400">PNG, çap üçün hazır</div>
-                </button>
-              </div>
+                  {live?.waiting_count ?? 0}
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
 
-              {/* QR + xidmət/ziyarətçi linkləri */}
-              <div className="grid lg:grid-cols-[280px_1fr] gap-4 min-w-0">
-                <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col items-center">
-                  <div className="w-44 h-44 rounded-xl border border-slate-100 p-2 grid place-items-center">
-                    {qrDataUrl ? (
-                      <img src={qrDataUrl} alt="QR" className="w-full h-full" />
-                    ) : (
-                      <span className="text-slate-300 text-sm">QR yaranır…</span>
-                    )}
-                  </div>
-                  <div className="text-sm font-semibold text-slate-700 mt-3">Ziyarətçi QR kodu</div>
-                  <div className="text-xs text-slate-400 text-center mt-1">
-                    Skan → nömrə → real-time izləmə
-                  </div>
-                  <button
-                    onClick={downloadQr}
-                    className="mt-3 w-full rounded-xl bg-brand-600 text-white py-2 text-sm font-semibold hover:bg-brand-700"
-                  >
-                    PNG yüklə
-                  </button>
-                </div>
+        {/* Filial yarat */}
+        <div className="p-3 border-t border-slate-100 dark:border-slate-800">
+          <button
+            onClick={createBranch}
+            className="w-full rounded-xl border border-dashed border-slate-300 dark:border-slate-700 py-2.5 text-sm text-slate-500 dark:text-slate-400 hover:border-brand-400 hover:text-brand-600 transition"
+          >
+            + Filial yarat
+          </button>
+        </div>
+      </aside>
 
-                <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3 min-w-0 overflow-hidden">
-                  <h3 className="font-bold text-slate-800 text-sm">Xidmətlər</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {services.map((s) => (
-                      <span
-                        key={s.id}
-                        className="group inline-flex items-center gap-1.5 rounded-full bg-slate-100 pl-3 pr-2 py-1 text-sm text-slate-600"
-                      >
-                        {s.name}
-                        <span className="text-slate-400 text-xs">~{s.avg_minutes}d</span>
-                        <button
-                          onClick={() => removeService(s.id)}
-                          className="text-slate-400 hover:text-red-600 text-xs"
-                          title="Sil"
-                        >
-                          ✕
-                        </button>
-                      </span>
-                    ))}
-                    {services.length === 0 && (
-                      <span className="text-xs text-slate-400">
-                        Yoxdur — ziyarətçi sadəcə nömrə alacaq
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      value={newService}
-                      onChange={(e) => setNewService(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && addService()}
-                      placeholder="Məs. Kassir, Həkim"
-                      className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
-                    />
-                    <input
-                      type="number"
-                      min={1}
-                      max={120}
-                      value={newServiceMin}
-                      onChange={(e) => setNewServiceMin(Number(e.target.value))}
-                      className="w-20 rounded-xl border border-slate-200 px-2 py-2 text-sm outline-none focus:border-brand-500"
-                      title="Orta dəqiqə"
-                    />
-                    <button
-                      onClick={addService}
-                      className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              </div>
+      {/* Mobil pərdə */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 z-30 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-              {/* Operatorlar + son ziyarətlər */}
-              <div className="grid lg:grid-cols-2 gap-4">
-                <div className="bg-white rounded-2xl border border-slate-200 p-5">
-                  <h3 className="font-bold text-slate-800 text-sm mb-3">Operatorlar</h3>
-                  <div className="space-y-1.5">
-                    {operators.map((o) => (
-                      <div
-                        key={o.id}
-                        className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2"
-                      >
-                        <span className="text-sm text-slate-700">{o.name}</span>
-                        <button
-                          onClick={() => removeOperator(o.id)}
-                          className="text-slate-400 hover:text-red-600 text-xs"
-                        >
-                          sil
-                        </button>
-                      </div>
-                    ))}
-                    {operators.length === 0 && (
-                      <div className="text-xs text-slate-400">Hələ operator yoxdur</div>
-                    )}
-                  </div>
-                  <div className="flex gap-2 mt-3">
-                    <input
-                      value={newOperator}
-                      onChange={(e) => setNewOperator(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && addOperator()}
-                      placeholder="Operator adı"
-                      className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
-                    />
-                    <button
-                      onClick={addOperator}
-                      className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
+      {/* ================= ƏSAS SÜTUN ================= */}
+      <div className="md:pl-64 flex flex-col min-h-screen">
+        {/* ---- HEADER ---- */}
+        <header className="sticky top-0 z-20 h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-6">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden text-slate-500 dark:text-slate-400 text-xl"
+              aria-label="Menyu"
+            >
+              ☰
+            </button>
+            <div className="flex items-center gap-2 md:hidden">
+              <span className="w-7 h-7 rounded-lg bg-brand-600 text-white grid place-items-center text-sm font-black">
+                Q
+              </span>
+              <span className="font-black text-slate-800 dark:text-slate-100">Növbə</span>
+            </div>
+            <span className="hidden md:block text-sm text-slate-400 dark:text-slate-500">
+              {NAV.find((n) => n.id === section)?.label ?? 'Tənzimləmələr'}
+            </span>
+          </div>
 
-                <div className="bg-white rounded-2xl border border-slate-200 p-5">
-                  <h3 className="font-bold text-slate-800 text-sm mb-3">Bugünkü ziyarətlər</h3>
-                  <div className="space-y-1 max-h-64 overflow-auto">
-                    {recent.map((t) => (
+          <div className="flex items-center gap-1 sm:gap-2">
+            {msg && <span className="text-xs text-emerald-600 mr-1 hidden sm:block">{msg}</span>}
+
+            {/* İşıqlı/Qaranlıq rejim */}
+            <button
+              onClick={() => setTheme(toggleTheme())}
+              className="w-9 h-9 rounded-full grid place-items-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              title={theme === 'dark' ? 'İşıqlı rejim' : 'Qaranlıq rejim'}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+
+            {/* Bildirişlər */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setNotifOpen(!notifOpen)
+                  setUserMenu(false)
+                }}
+                className="relative w-9 h-9 rounded-full grid place-items-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                title="Bildirişlər"
+              >
+                🔔
+                {(live?.waiting_count ?? 0) > 0 && (
+                  <span className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold grid place-items-center">
+                    {Math.min(live?.waiting_count ?? 0, 9)}
+                  </span>
+                )}
+              </button>
+              {notifOpen && (
+                <>
+                  <div className="fixed inset-0" onClick={() => setNotifOpen(false)} />
+                  <div className="absolute right-0 top-11 w-72 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+                    <div className="px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800">
+                      Bugünkü ziyarətlər
+                    </div>
+                    {recent.slice(0, 5).map((t) => (
                       <div
                         key={t.id}
-                        className="flex items-center justify-between text-sm px-2 py-1.5 rounded-lg hover:bg-slate-50"
+                        className="px-4 py-2.5 flex items-center justify-between text-sm hover:bg-slate-50 dark:hover:bg-slate-800/60"
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-slate-700">{t.code}</span>
-                          {t.visitor_name && (
-                            <span className="text-slate-400 text-xs">{t.visitor_name}</span>
-                          )}
-                          {t.operator_id && (
-                            <span className="text-xs text-brand-600">
-                              {operators.find((o) => o.id === t.operator_id)?.name ?? ''}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <StatusBadge status={t.status} />
-                          <span className="text-xs text-slate-400 tabular-nums">
-                            {new Date(t.joined_at).toLocaleTimeString('az-AZ', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                        </div>
+                        <span className="font-mono font-semibold text-slate-700 dark:text-slate-200">{t.code}</span>
+                        <span className={`text-xs rounded-full px-2 py-0.5 ${STATUS[t.status].c}`}>
+                          {STATUS[t.status].t}
+                        </span>
                       </div>
                     ))}
                     {recent.length === 0 && (
-                      <div className="text-xs text-slate-400 text-center py-6">
-                        Bu gün hələ ziyarət yoxdur
+                      <div className="px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
+                        Bugün ziyarət yoxdur
                       </div>
                     )}
                   </div>
-                </div>
-              </div>
-            </>
+                </>
+              )}
+            </div>
+
+            {/* Tənzimləmələr */}
+            <button
+              onClick={() => {
+                go('settings')
+                setNotifOpen(false)
+                setUserMenu(false)
+              }}
+              className="w-9 h-9 rounded-full grid place-items-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              title="Tənzimləmələr"
+            >
+              ⚙
+            </button>
+
+            {/* İstifadəçi */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setUserMenu(!userMenu)
+                  setNotifOpen(false)
+                }}
+                className="flex items-center gap-2 rounded-full pl-1 pr-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <span className="w-7 h-7 rounded-full bg-brand-600 text-white text-xs font-bold grid place-items-center uppercase">
+                  {userEmail.charAt(0)}
+                </span>
+                <span className="hidden sm:block text-sm font-medium text-slate-700 dark:text-slate-200 max-w-[120px] truncate">
+                  {userEmail}
+                </span>
+                <span className="text-slate-400 dark:text-slate-500 text-xs">▾</span>
+              </button>
+              {userMenu && (
+                <>
+                  <div className="fixed inset-0" onClick={() => setUserMenu(false)} />
+                  <div className="absolute right-0 top-11 w-56 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+                    <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+                      <div className="text-xs text-slate-400 dark:text-slate-500">Daxil olub</div>
+                      <div className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{userEmail}</div>
+                    </div>
+                    <button
+                      onClick={() => go('settings')}
+                      className="w-full text-left px-4 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    >
+                      ⚙ Tənzimləmələr
+                    </button>
+                    <button
+                      onClick={signOut}
+                      className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"
+                    >
+                      ⎋ Hesabdan çıx
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* ---- MƏZMUN ---- */}
+        <main className="flex-1 p-4 sm:p-6 min-w-0">
+          {!selected && section !== 'branches' ? (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center text-slate-400 dark:text-slate-500">
+              Sol menyu → Filial seçin (və ya «Filiallar» bölməsində yaradın)
+            </div>
+          ) : section === 'dashboard' ? (
+            <DashboardSection />
+          ) : section === 'visitor' ? (
+            <VisitorSection />
+          ) : section === 'operators' ? (
+            <OperatorsSection />
+          ) : section === 'display' ? (
+            <DisplaySection />
+          ) : section === 'qr' ? (
+            <QrSection />
+          ) : section === 'branches' ? (
+            <BranchesSection />
+          ) : section === 'services' ? (
+            <ServicesSection />
+          ) : section === 'history' ? (
+            <HistorySection />
+          ) : (
+            <SettingsSection />
           )}
         </main>
       </div>
     </div>
   )
-}
 
-// ---- Kiçik komponentlər ----
+  // ================= BÖLMƏLƏR =================
 
-function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <div
-      className={`rounded-2xl border p-4 ${
-        accent ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white border-slate-200'
-      }`}
-    >
-      <div className={`text-xs ${accent ? 'text-white/70' : 'text-slate-400'}`}>{label}</div>
+  function DashboardSection() {
+    const maxCount = Math.max(...week.map((w) => w.count), 1)
+    return (
+      <div className="space-y-4 max-w-5xl">
+        {/* Stat kartları */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatCard label="Hazırda çağırılan" value={live?.current_code ?? '—'} accent />
+          <StatCard label="Gözləyən" value={`${live?.waiting_count ?? 0} nəfər`} />
+          <StatCard label="Bugünkü ziyarət" value={`${todayCount}`} />
+          <StatCard label="Orta gözləmə" value={avgWait ? `${avgWait} dəq` : '—'} />
+        </div>
+
+        {/* Sürətli keçidlər */}
+        <div className="grid sm:grid-cols-3 gap-3">
+          <QuickBtn href={panelUrl(selected!.slug)} icon="⚙" title="Operator paneli" desc="Növbəti / Geri çağır" />
+          <QuickBtn href={displayUrl(selected!.slug)} icon="🖥" title="Gözləmə ekranı" desc="TV üçün" external />
+          <QuickBtn href={queueUrl(selected!.slug)} icon="📱" title="Ziyarətçi səhifəsi" desc="QR skan → nömrə" external />
+        </div>
+
+        {/* 7 günlük qrafik */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+          <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-4">Son 7 gün</h3>
+          <div className="flex items-end gap-2 h-36">
+            {week.map((w, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{w.count || ''}</span>
+                <div
+                  className="w-full max-w-12 rounded-t-lg bg-brand-500/90 transition-all"
+                  style={{ height: `${Math.max(4, (w.count / maxCount) * 100)}px` }}
+                />
+                <span className="text-[10px] text-slate-400 dark:text-slate-500">{w.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bugünkü ziyarətlər */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Bugünkü ziyarətlər</h3>
+            <button
+              onClick={() => go('history')}
+              className="text-xs text-brand-600 hover:underline"
+            >
+              Bütün tarixçə →
+            </button>
+          </div>
+          <div className="space-y-1">
+            {recent.map((t) => (
+              <div
+                key={t.id}
+                className="flex items-center justify-between text-sm px-2 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/60"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-200">{t.code}</span>
+                  {t.visitor_name && <span className="text-slate-400 dark:text-slate-500 text-xs truncate">{t.visitor_name}</span>}
+                  {t.operator_id && (
+                    <span className="text-xs text-brand-600">
+                      {operators.find((o) => o.id === t.operator_id)?.name}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <StatusBadge status={t.status} />
+                  <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">
+                    {new Date(t.joined_at).toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {recent.length === 0 && (
+              <div className="text-xs text-slate-400 dark:text-slate-500 text-center py-6">Bu gün hələ ziyarət yoxdur</div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  function VisitorSection() {
+    return (
+      <Card title="Ziyarətçi səhifəsi">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          Ziyarətçilər QR-u skan edir → nömrə alır → real-time izləyir. Bu link QR kodların içindədir.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-6 items-start">
+          <div className="w-40 h-40 rounded-xl border border-slate-100 dark:border-slate-800 p-2 grid place-items-center shrink-0">
+            {qrDataUrl ? <img src={qrDataUrl} alt="QR" className="w-full h-full" /> : <span className="text-slate-300">…</span>}
+          </div>
+          <div className="space-y-3 min-w-0">
+            <code className="block break-all bg-slate-50 dark:bg-slate-800/40 rounded-lg px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
+              {queueUrl(selected!.slug)}
+            </code>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={queueUrl(selected!.slug)}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700"
+              >
+                Aç →
+              </a>
+              <button
+                onClick={() => copy(queueUrl(selected!.slug))}
+                className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+              >
+                Linki kopyala
+              </button>
+            </div>
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
+  function OperatorsSection() {
+    return (
+      <Card title={`Operatorlar (${operators.length})`} action={<AddBtn onClick={addOperator} label="Operator əlavə et" />}>
+        <div className="space-y-2">
+          {operators.map((o) => (
+            <div key={o.id} className="flex items-center justify-between rounded-xl bg-slate-50 dark:bg-slate-800/40 px-4 py-2.5">
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300 grid place-items-center text-sm font-bold">
+                  {o.name.charAt(0)}
+                </span>
+                <span className="text-sm text-slate-700 dark:text-slate-200 font-medium">{o.name}</span>
+              </div>
+              <button onClick={() => removeOperator(o.id)} className="text-xs text-slate-400 dark:text-slate-500 hover:text-red-600">
+                sil
+              </button>
+            </div>
+          ))}
+          {operators.length === 0 && (
+            <div className="text-xs text-slate-400 dark:text-slate-500 text-center py-8">
+              Hələ operator yoxdur — operatorlar öz adını paneldə seçir
+            </div>
+          )}
+        </div>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-4">
+          Operatorlar <code className="bg-slate-100 dark:bg-slate-800/60 px-1 rounded">#/panel/{selected?.slug}</code> ünvanından
+          işləyir, «Mən kiməm» seçərək növbəni idarə edirlər.
+        </p>
+      </Card>
+    )
+  }
+
+  function DisplaySection() {
+    return (
+      <Card title="Gözləmə zalı ekranı">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          Bu linki noutbuk və ya televizorda açın — tam ekran rejimində növbə göstərilir. Real-time yenilənir.
+        </p>
+        <code className="block break-all bg-slate-50 dark:bg-slate-800/40 rounded-lg px-3 py-2 text-xs text-slate-600 dark:text-slate-300 mb-4">
+          {displayUrl(selected!.slug)}
+        </code>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={displayUrl(selected!.slug)}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700"
+          >
+            🖥 Ekranı aç
+          </a>
+          <button
+            onClick={() => copy(displayUrl(selected!.slug))}
+            className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+          >
+            Linki kopyala
+          </button>
+        </div>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-4">💡 Tam ekran üçün: F11 (Windows) / ⌃⌘F (Mac)</p>
+      </Card>
+    )
+  }
+
+  function QrSection() {
+    return (
+      <Card title="QR kod">
+        <div className="flex flex-col sm:flex-row gap-6 items-start">
+          <div className="w-56 h-56 rounded-2xl border border-slate-100 dark:border-slate-800 p-3 grid place-items-center bg-white dark:bg-slate-900 shrink-0">
+            {qrDataUrl ? <img src={qrDataUrl} alt="QR" className="w-full h-full" /> : <span className="text-slate-300">…</span>}
+          </div>
+          <div className="space-y-3 min-w-0">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Çap edib masaya/qarşılıqlı yerləşdirin. Ziyarətçi skan edəndə növbəyə qoşulur.
+            </p>
+            <code className="block break-all bg-slate-50 dark:bg-slate-800/40 rounded-lg px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
+              {queueUrl(selected!.slug)}
+            </code>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={downloadQr}
+                className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700"
+              >
+                ⬇ PNG yüklə
+              </button>
+              <button
+                onClick={() => copy(queueUrl(selected!.slug))}
+                className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+              >
+                Linki kopyala
+              </button>
+            </div>
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
+  function BranchesSection() {
+    return (
+      <Card title={`Filiallar (${branches.length})`} action={<AddBtn onClick={createBranch} label="Filial yarat" />}>
+        <div className="grid sm:grid-cols-2 gap-3">
+          {branches.map((b) => (
+            <div
+              key={b.id}
+              className={`rounded-2xl border p-4 transition ${
+                selected?.id === b.id ? 'border-brand-500 bg-brand-50 dark:bg-slate-950/50' : 'border-slate-200 dark:border-slate-800'
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="min-w-0">
+                  <div className="font-bold text-slate-800 dark:text-slate-100">{b.name}</div>
+                  <div className="text-xs text-slate-400 dark:text-slate-500 truncate">/{b.slug}</div>
+                  {b.address && <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{b.address}</div>}
+                </div>
+                <span
+                  className={`text-[10px] rounded-full px-2 py-0.5 shrink-0 ${
+                    b.is_active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-100 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500'
+                  }`}
+                >
+                  {b.is_active ? 'aktiv' : 'deaktiv'}
+                </span>
+              </div>
+              <div className="flex gap-2 mt-3">
+                {selected?.id !== b.id && (
+                  <button
+                    onClick={() => openBranch(b)}
+                    className="rounded-lg bg-brand-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-brand-700"
+                  >
+                    Seç
+                  </button>
+                )}
+                {selected?.id === b.id && (
+                  <span className="text-xs text-brand-700 font-semibold px-2 py-1.5">Seçilib ✓</span>
+                )}
+              </div>
+            </div>
+          ))}
+          {branches.length === 0 && (
+            <div className="text-xs text-slate-400 dark:text-slate-500 text-center py-8 sm:col-span-2">
+              İlk filialınızı yaradın
+            </div>
+          )}
+        </div>
+      </Card>
+    )
+  }
+
+  function ServicesSection() {
+    return (
+      <Card title={`Xidmətlər (${services.length})`} action={<AddBtn onClick={addService} label="Xidmət əlavə et" />}>
+        <div className="space-y-2">
+          {services.map((s) => (
+            <div key={s.id} className="flex items-center justify-between rounded-xl bg-slate-50 dark:bg-slate-800/40 px-4 py-2.5">
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-slate-700 dark:text-slate-200 font-medium">{s.name}</span>
+                <span className="text-xs bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-full px-2 py-0.5">
+                  ~{s.avg_minutes} dəq
+                </span>
+              </div>
+              <button onClick={() => removeService(s.id)} className="text-xs text-slate-400 dark:text-slate-500 hover:text-red-600">
+                sil
+              </button>
+            </div>
+          ))}
+          {services.length === 0 && (
+            <div className="text-xs text-slate-400 dark:text-slate-500 text-center py-8">
+              Xidmət yoxdur — ziyarətçi birbaşa nömrə alır
+            </div>
+          )}
+        </div>
+      </Card>
+    )
+  }
+
+  function HistorySection() {
+    return (
+      <Card title={`Ziyarətçilər (${historyRows.length})`}>
+        {/* Tarix seçimi */}
+        <div className="flex flex-wrap items-end gap-3 mb-4">
+          <div>
+            <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Başlanğıc</label>
+            <input
+              type="date"
+              value={from}
+              max={todayStr}
+              onChange={(e) => setFrom(e.target.value)}
+              className="rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm outline-none focus:border-brand-500"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Bitmə</label>
+            <input
+              type="date"
+              value={to}
+              min={from}
+              onChange={(e) => setTo(e.target.value)}
+              className="rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm outline-none focus:border-brand-500"
+            />
+          </div>
+          <button
+            onClick={exportCsv}
+            className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+          >
+            ⬇ CSV yüklə
+          </button>
+        </div>
+
+        <div className="overflow-x-auto -mx-2">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">
+                <th className="py-2 px-2 font-medium">Kod</th>
+                <th className="py-2 px-2 font-medium">Ad</th>
+                <th className="py-2 px-2 font-medium">Xidmət</th>
+                <th className="py-2 px-2 font-medium">Əməkdaş</th>
+                <th className="py-2 px-2 font-medium">Status</th>
+                <th className="py-2 px-2 font-medium">Qoşuldu</th>
+                <th className="py-2 px-2 font-medium">Çağırıldı</th>
+              </tr>
+            </thead>
+            <tbody>
+              {historyRows.map((t) => (
+                <tr key={t.id} className="border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                  <td className="py-2 px-2 font-mono font-semibold text-slate-700 dark:text-slate-200">{t.code}</td>
+                  <td className="py-2 px-2 text-slate-600 dark:text-slate-300">{t.visitor_name ?? '—'}</td>
+                  <td className="py-2 px-2 text-slate-500 dark:text-slate-400 text-xs">
+                    {services.find((s) => s.id === t.service_id)?.name ?? '—'}
+                  </td>
+                  <td className="py-2 px-2 text-slate-500 dark:text-slate-400 text-xs">
+                    {operators.find((o) => o.id === t.operator_id)?.name ?? '—'}
+                  </td>
+                  <td className="py-2 px-2">
+                    <StatusBadge status={t.status} />
+                  </td>
+                  <td className="py-2 px-2 text-xs text-slate-400 dark:text-slate-500 tabular-nums">
+                    {new Date(t.joined_at).toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })}
+                  </td>
+                  <td className="py-2 px-2 text-xs text-slate-400 dark:text-slate-500 tabular-nums">
+                    {t.called_at
+                      ? new Date(t.called_at).toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })
+                      : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {historyRows.length === 0 && (
+            <div className="text-center text-sm text-slate-400 dark:text-slate-500 py-10">
+              Bu tarixlərdə ziyarət yoxdur
+            </div>
+          )}
+        </div>
+      </Card>
+    )
+  }
+
+  function SettingsSection() {
+    return (
+      <Card title="Tənzimləmələr">
+        <div className="space-y-4 max-w-md">
+          <div>
+            <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Filial adı</label>
+            <input
+              value={cfgName}
+              onChange={(e) => setCfgName(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm outline-none focus:border-brand-500"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Ünvan</label>
+            <input
+              value={cfgAddress}
+              onChange={(e) => setCfgAddress(e.target.value)}
+              placeholder="Məs. Bakı, Nizami 1"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm outline-none focus:border-brand-500"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 dark:text-slate-500 block mb-1">Nömrə prefiksi</label>
+            <input
+              value={cfgPrefix}
+              onChange={(e) => setCfgPrefix(e.target.value.toUpperCase().slice(0, 3))}
+              className="w-24 rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm outline-none focus:border-brand-500"
+            />
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Nömrələr bu şəkildə olacaq: {cfgPrefix}-1, {cfgPrefix}-2 …</p>
+          </div>
+          <button
+            onClick={saveSettings}
+            className="rounded-xl bg-brand-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-700"
+          >
+            Saxla
+          </button>
+        </div>
+      </Card>
+    )
+  }
+
+  // ================= Köməkçi komponentlər =================
+
+  function Card({
+    title,
+    action,
+    children,
+  }: {
+    title: string
+    action?: React.ReactNode
+    children: React.ReactNode
+  }) {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 max-w-5xl">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-slate-800 dark:text-slate-100">{title}</h2>
+          {action}
+        </div>
+        {children}
+      </div>
+    )
+  }
+
+  function AddBtn({ onClick, label }: { onClick: () => void; label: string }) {
+    return (
+      <button
+        onClick={onClick}
+        className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700 shrink-0"
+      >
+        + {label}
+      </button>
+    )
+  }
+
+  function StatCard({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+    return (
       <div
-        className={`text-2xl font-black tabular-nums mt-1 ${
-          accent ? 'text-white' : 'text-slate-800'
+        className={`rounded-2xl border p-4 ${
+          accent ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
         }`}
       >
-        {value}
+        <div className={`text-xs ${accent ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}`}>{label}</div>
+        <div className={`text-2xl font-black tabular-nums mt-1 ${accent ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
+          {value}
+        </div>
       </div>
-    </div>
-  )
-}
-
-function QuickLink({
-  href,
-  icon,
-  title,
-  desc,
-  external,
-}: {
-  href: string
-  icon: string
-  title: string
-  desc: string
-  external?: boolean
-}) {
-  return (
-    <a
-      href={href}
-      target={external ? '_blank' : undefined}
-      rel={external ? 'noreferrer' : undefined}
-      className="rounded-2xl border border-slate-200 bg-white p-4 hover:border-brand-400 transition"
-    >
-      <div className="text-2xl">{icon}</div>
-      <div className="font-semibold text-slate-800 text-sm mt-1">{title}</div>
-      <div className="text-xs text-slate-400">{desc}</div>
-    </a>
-  )
-}
-
-function StatusBadge({ status }: { status: Ticket['status'] }) {
-  const map: Record<Ticket['status'], { t: string; c: string }> = {
-    waiting: { t: 'gözləyir', c: 'bg-slate-100 text-slate-500' },
-    called: { t: 'çağırıldı', c: 'bg-amber-100 text-amber-700' },
-    serving: { t: 'xidmətdə', c: 'bg-blue-100 text-blue-700' },
-    done: { t: 'bitdi', c: 'bg-emerald-100 text-emerald-700' },
-    skipped: { t: 'buraxıldı', c: 'bg-red-100 text-red-600' },
+    )
   }
-  const s = map[status]
-  return <span className={`text-xs rounded-full px-2 py-0.5 ${s.c}`}>{s.t}</span>
+
+  function QuickBtn({
+    href,
+    icon,
+    title,
+    desc,
+    external,
+  }: {
+    href: string
+    icon: string
+    title: string
+    desc: string
+    external?: boolean
+  }) {
+    return (
+      <a
+        href={href}
+        target={external ? '_blank' : undefined}
+        rel={external ? 'noreferrer' : undefined}
+        className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:border-brand-400 transition"
+      >
+        <div className="text-2xl">{icon}</div>
+        <div className="font-semibold text-slate-800 dark:text-slate-100 text-sm mt-1">{title}</div>
+        <div className="text-xs text-slate-400 dark:text-slate-500">{desc}</div>
+      </a>
+    )
+  }
+
+  function StatusBadge({ status }: { status: Ticket['status'] }) {
+    const s = STATUS[status]
+    return <span className={`text-xs rounded-full px-2 py-0.5 ${s.c}`}>{s.t}</span>
+  }
 }

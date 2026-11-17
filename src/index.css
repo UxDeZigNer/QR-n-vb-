@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Qaranlıq rejim — .dark sinifi ilə idarə olunur */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-brand-50: #eef7ff;
   --color-brand-100: #d9edff;

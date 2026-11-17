@@ -138,7 +138,7 @@ export default function Visitor() {
 
   if (loading) {
     return (
-      <div className="min-h-screen grid place-items-center bg-brand-50">
+      <div className="min-h-screen grid place-items-center bg-brand-50 dark:bg-slate-950">
         <div className="animate-pulse text-brand-600 text-lg">Yüklənir…</div>
       </div>
     )
@@ -146,11 +146,11 @@ export default function Visitor() {
 
   if (notFound) {
     return (
-      <div className="min-h-screen grid place-items-center bg-brand-50 px-6">
+      <div className="min-h-screen grid place-items-center bg-brand-50 dark:bg-slate-950 px-6">
         <div className="text-center">
           <div className="text-5xl mb-3">🔍</div>
-          <h1 className="text-xl font-bold text-slate-800">Növbə tapılmadı</h1>
-          <p className="text-slate-500 mt-2">QR kodu yenidən skan edin və ya təşkilatla əlaqə saxlayın.</p>
+          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Növbə tapılmadı</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-2">QR kodu yenidən skan edin və ya təşkilatla əlaqə saxlayın.</p>
         </div>
       </div>
     )
@@ -164,14 +164,14 @@ export default function Visitor() {
     : 0
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-brand-50 to-white dark:from-slate-800 dark:to-slate-900">
       <header className="px-6 py-5 flex items-center gap-3 border-b border-brand-100 bg-white/70 backdrop-blur">
         <div className="w-9 h-9 rounded-xl bg-brand-600 grid place-items-center text-white font-bold">
           {branch?.prefix}
         </div>
         <div>
-          <div className="font-semibold text-slate-800 leading-tight">{branch?.name}</div>
-          <div className="text-xs text-slate-500">{branch?.address ?? 'Növbə sistemi'}</div>
+          <div className="font-semibold text-slate-800 dark:text-slate-100 leading-tight">{branch?.name}</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400">{branch?.address ?? 'Növbə sistemi'}</div>
         </div>
       </header>
 
@@ -183,19 +183,19 @@ export default function Visitor() {
               <div className="text-5xl font-black text-brand-600 tabular-nums">
                 {currentCode ?? '—'}
               </div>
-              <div className="text-sm text-slate-500 mt-1">Hazırda çağırılan nömrə</div>
-              <div className="mt-3 inline-flex items-center gap-2 text-sm bg-white border border-brand-100 rounded-full px-3 py-1">
+              <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">Hazırda çağırılan nömrə</div>
+              <div className="mt-3 inline-flex items-center gap-2 text-sm bg-white dark:bg-slate-900 border border-brand-100 rounded-full px-3 py-1">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 Növbədə {waitingCount} nəfər gözləyir
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-              <h2 className="font-semibold text-slate-800">Növbəyə qoşulun</h2>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-4">
+              <h2 className="font-semibold text-slate-800 dark:text-slate-100">Növbəyə qoşulun</h2>
 
               {services.length > 0 && (
                 <div>
-                  <label className="text-sm text-slate-600">Xidmət</label>
+                  <label className="text-sm text-slate-600 dark:text-slate-300">Xidmət</label>
                   <div className="grid grid-cols-2 gap-2 mt-1">
                     {services.map((s) => (
                       <button
@@ -203,12 +203,12 @@ export default function Visitor() {
                         onClick={() => setServiceId(s.id === serviceId ? '' : s.id)}
                         className={`text-sm rounded-xl border px-3 py-2 text-left transition ${
                           serviceId === s.id
-                            ? 'border-brand-600 bg-brand-50 text-brand-700'
-                            : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                            ? 'border-brand-600 bg-brand-50 dark:bg-slate-950 text-brand-700'
+                            : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300'
                         }`}
                       >
                         {s.name}
-                        <div className="text-xs text-slate-400">~{s.avg_minutes} dəq</div>
+                        <div className="text-xs text-slate-400 dark:text-slate-500">~{s.avg_minutes} dəq</div>
                       </button>
                     ))}
                   </div>
@@ -216,12 +216,12 @@ export default function Visitor() {
               )}
 
               <div>
-                <label className="text-sm text-slate-600">Adınız (istəyə bağlı)</label>
+                <label className="text-sm text-slate-600 dark:text-slate-300">Adınız (istəyə bağlı)</label>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Məsələn, Elvin"
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none focus:border-brand-500"
+                  className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 outline-none focus:border-brand-500"
                 />
               </div>
 
@@ -261,26 +261,26 @@ export default function Visitor() {
             </div>
 
             {myTicket.status === 'waiting' && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 text-center">
-                <div className="text-sm text-slate-500">Təxmini gözləmə</div>
-                <div className="text-3xl font-bold text-slate-800">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 text-center">
+                <div className="text-sm text-slate-500 dark:text-slate-400">Təxmini gözləmə</div>
+                <div className="text-3xl font-bold text-slate-800 dark:text-slate-100">
                   ~{estimateMinutes(ahead, activeService?.avg_minutes ?? 5)} dəq
                 </div>
               </div>
             )}
 
-            <div className="bg-white rounded-2xl border border-slate-200 p-5">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Hazırda çağırılan</span>
-                <span className="font-semibold text-slate-800 tabular-nums">{currentCode ?? '—'}</span>
+                <span className="text-slate-500 dark:text-slate-400">Hazırda çağırılan</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-100 tabular-nums">{currentCode ?? '—'}</span>
               </div>
               <div className="flex justify-between text-sm mt-2">
-                <span className="text-slate-500">Növbədə gözləyən</span>
-                <span className="font-semibold text-slate-800">{waitingCount} nəfər</span>
+                <span className="text-slate-500 dark:text-slate-400">Növbədə gözləyən</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-100">{waitingCount} nəfər</span>
               </div>
               <div className="flex justify-between text-sm mt-2">
-                <span className="text-slate-500">Növbə statusu</span>
-                <span className="font-semibold text-slate-800">
+                <span className="text-slate-500 dark:text-slate-400">Növbə statusu</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-100">
                   {myTicket.status === 'waiting' && 'Gözləyir…'}
                   {myTicket.status === 'called' && 'Çağırıldı'}
                   {myTicket.status === 'serving' && 'Xidmət göstərilir'}
@@ -292,7 +292,7 @@ export default function Visitor() {
 
             <button
               onClick={leaveQueue}
-              className="w-full text-sm text-slate-400 hover:text-slate-600 py-2"
+              className="w-full text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 py-2"
             >
               Növbəni tərk et
             </button>

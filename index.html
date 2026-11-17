@@ -7,6 +7,15 @@
     <meta name="description" content="QR skan → növbə nömrəsi → real-time izləmə. Növbədə gözləməyə son." />
     <meta name="theme-color" content="#1b6ef5" />
     <title>Növbə — QR növbə idarəetmə sistemi</title>
+    <script>
+      // Rejimi erkən tətbiq et (ağ flash olmasın)
+      try {
+        var t = localStorage.getItem('qrm_theme')
+        if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark')
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
