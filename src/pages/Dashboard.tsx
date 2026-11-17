@@ -100,6 +100,7 @@ export default function Dashboard() {
   const [operators, setOperators] = useState<Operator[]>([])
   const [recent, setRecent] = useState<Ticket[]>([])
   const [todayCount, setTodayCount] = useState(0)
+  const [todayAll, setTodayAll] = useState<Pick<Ticket, 'service_id' | 'operator_id'>[]>([])
   const [avgWait, setAvgWait] = useState(0)
   const [week, setWeek] = useState<{ label: string; count: number }[]>([])
   const [qrDataUrl, setQrDataUrl] = useState('')
@@ -132,7 +133,7 @@ export default function Dashboard() {
     weekStart.setDate(weekStart.getDate() - 6)
     weekStart.setHours(0, 0, 0, 0)
 
-    const [liveRes, svcRes, opRes, todayRes, weekRes] = await Promise.all([
+    const [liveRes, svcRes, opRes, todayRes, weekRes, dayRes] = await Promise.all([
       supabase.from('branch_live').select('*').eq('branch_id', b.id).maybeSingle(),
       supabase.from('services').select('*').eq('branch_id', b.id).order('sort_order'),
       supabase.from('operators').select('*').eq('branch_id', b.id).order('name'),
@@ -148,11 +149,18 @@ export default function Dashboard() {
         .select('joined_at, called_at')
         .eq('branch_id', b.id)
         .gte('joined_at', iso(weekStart)),
+      supabase
+        .from('tickets')
+        .select('service_id, operator_id')
+        .eq('branch_id', b.id)
+        .gte('joined_at', iso(dayStart))
+        .limit(2000),
     ])
 
     setLive(liveRes.data as BranchLive | null)
     setServices((svcRes.data ?? []) as Service[])
     setOperators((opRes.data ?? []) as Operator[])
+    setTodayAll((dayRes.data ?? []) as Pick<Ticket, 'service_id' | 'operator_id'>[])
 
     const todays = (todayRes.data ?? []) as Ticket[]
     setRecent(todays)
@@ -683,6 +691,34 @@ export default function Dashboard() {
                 <span className="text-[10px] text-slate-400 dark:text-slate-500">{w.label}</span>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Xidmət radarı + Operator donut */}
+        <div className="grid md:grid-cols-2 gap-3">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-2 flex items-center gap-1.5">
+              <Icon icon="lucide:radar" className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+              Xidmətə gələnlər (bugün)
+            </h3>
+            <RadarChart
+              items={services.map((s) => ({
+                label: s.name,
+                value: todayAll.filter((t) => t.service_id === s.id).length,
+              }))}
+            />
+          </div>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-2 flex items-center gap-1.5">
+              <Icon icon="lucide:chart-pie" className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+              Operatora müraciət (bugün)
+            </h3>
+            <DonutChart
+              items={operators.map((o) => ({
+                label: o.name,
+                value: todayAll.filter((t) => t.operator_id === o.id).length,
+              }))}
+            />
           </div>
         </div>
 
@@ -1252,4 +1288,140 @@ function QuickBtn({
 function StatusBadge({ status }: { status: Ticket['status'] }) {
   const s = STATUS[status]
   return <span className={`text-xs rounded-full px-2 py-0.5 ${s.c}`}>{s.t}</span>
+}
+
+// ================= Qrafiklər =================
+
+const PALETTE = ['#1b6ef5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16']
+
+function EmptyChart() {
+  return (
+    <div className="text-xs text-slate-400 dark:text-slate-500 text-center py-10">
+      Bu gün hələ məlumat yoxdur
+    </div>
+  )
+}
+
+/** Radar — xidmətə gələnlər */
+function RadarChart({ items }: { items: { label: string; value: number }[] }) {
+  const n = items.length
+  if (n < 3) return <EmptyChart />
+  const C = 130
+  const R = 88
+  const max = Math.max(...items.map((i) => i.value), 1)
+  const pt = (i: number, f: number): [number, number] => {
+    const a = (Math.PI * 2 * i) / n - Math.PI / 2
+    return [C + Math.cos(a) * R * f, C + Math.sin(a) * R * f]
+  }
+  const ring = (f: number) => items.map((_, i) => pt(i, f).join(',')).join(' ')
+  const dataPoly = items.map((it, i) => pt(i, Math.max(it.value / max, 0.06)).join(',')).join(' ')
+  return (
+    <svg viewBox="0 0 260 260" className="w-full max-w-xs mx-auto">
+      {[1 / 3, 2 / 3, 1].map((f, i) => (
+        <polygon
+          key={i}
+          points={ring(f)}
+          fill="none"
+          className="stroke-slate-200 dark:stroke-slate-700"
+          strokeWidth="1"
+        />
+      ))}
+      {items.map((_, i) => {
+        const [x, y] = pt(i, 1)
+        return (
+          <line
+            key={i}
+            x1={C}
+            y1={C}
+            x2={x}
+            y2={y}
+            className="stroke-slate-200 dark:stroke-slate-700"
+            strokeWidth="1"
+          />
+        )
+      })}
+      <polygon points={dataPoly} className="fill-brand-600/25 stroke-brand-600" strokeWidth="2" />
+      {items.map((it, i) => {
+        const [x, y] = pt(i, Math.max(it.value / max, 0.06))
+        return <circle key={i} cx={x} cy={y} r="3.5" className="fill-brand-600" />
+      })}
+      {items.map((it, i) => {
+        const [x, y] = pt(i, 1.22)
+        return (
+          <text key={i} x={x} y={y} textAnchor="middle" className="fill-slate-500 dark:fill-slate-400">
+            <tspan className="text-[10px] font-medium">{it.label}</tspan>
+            <tspan x={x} dy="12" className="text-[11px] font-bold fill-slate-700 dark:fill-slate-200">
+              {it.value}
+            </tspan>
+          </text>
+        )
+      })}
+    </svg>
+  )
+}
+
+/** Donut — operatorlara müraciət */
+function DonutChart({ items }: { items: { label: string; value: number }[] }) {
+  const rows = items.filter((i) => i.value > 0)
+  const total = rows.reduce((a, b) => a + b.value, 0)
+  if (total === 0) return <EmptyChart />
+  const R = 54
+  const CIRC = 2 * Math.PI * R
+  let off = 0
+  const segs = rows.map((it, i) => {
+    const len = (it.value / total) * CIRC
+    const seg = { ...it, len, off, color: PALETTE[i % PALETTE.length] }
+    off += len
+    return seg
+  })
+  return (
+    <div className="flex items-center gap-5 flex-wrap justify-center sm:justify-start">
+      <svg viewBox="0 0 140 140" className="w-36 h-36 shrink-0">
+        <g transform="rotate(-90 70 70)">
+          <circle
+            cx="70"
+            cy="70"
+            r={R}
+            fill="none"
+            strokeWidth="22"
+            className="stroke-slate-100 dark:stroke-slate-800"
+          />
+          {segs.map((s, i) => {
+            const adj = Math.max(s.len - 1.5, 0.5)
+            return (
+              <circle
+                key={i}
+                cx="70"
+                cy="70"
+                r={R}
+                fill="none"
+                strokeWidth="22"
+                stroke={s.color}
+                strokeDasharray={`${adj} ${CIRC - adj}`}
+                strokeDashoffset={-s.off}
+              />
+            )
+          })}
+        </g>
+        <text x="70" y="68" textAnchor="middle" className="fill-slate-800 dark:fill-slate-100 text-2xl font-black">
+          {total}
+        </text>
+        <text x="70" y="84" textAnchor="middle" className="fill-slate-400 dark:fill-slate-500 text-[9px]">
+          müraciət
+        </text>
+      </svg>
+      <div className="space-y-1.5 min-w-[150px]">
+        {segs.map((s, i) => (
+          <div key={i} className="flex items-center gap-2 text-sm">
+            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+            <span className="text-slate-600 dark:text-slate-300 truncate max-w-[110px]">{s.label}</span>
+            <span className="ml-auto font-semibold text-slate-800 dark:text-slate-100 tabular-nums">{s.value}</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500 w-9 text-right tabular-nums">
+              {Math.round((s.value / total) * 100)}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
