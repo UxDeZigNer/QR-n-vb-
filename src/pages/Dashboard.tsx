@@ -681,15 +681,19 @@ export default function Dashboard() {
         <div className="grid lg:grid-cols-3 gap-3">
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-4">Son 7 gün</h3>
-            <div className="flex items-end gap-2 h-36">
+            <div className="space-y-2.5">
               {week.map((w, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{w.count || ''}</span>
-                  <div
-                    className="w-full max-w-12 rounded-t-lg bg-brand-500/90 transition-all"
-                    style={{ height: `${Math.max(4, (w.count / maxCount) * 100)}px` }}
-                  />
-                  <span className="text-[10px] text-slate-400 dark:text-slate-500">{w.label}</span>
+                <div key={i} className="flex items-center gap-3">
+                  <span className="w-8 text-[10px] text-slate-400 dark:text-slate-500 shrink-0">{w.label}</span>
+                  <div className="flex-1 h-5 rounded-full bg-slate-100 dark:bg-slate-800/60 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-brand-500/90 transition-all"
+                      style={{ width: `${Math.max(w.count ? (w.count / maxCount) * 100 : 0, w.count ? 6 : 0)}%` }}
+                    />
+                  </div>
+                  <span className="w-5 text-xs font-semibold text-slate-600 dark:text-slate-300 tabular-nums text-right">
+                    {w.count}
+                  </span>
                 </div>
               ))}
             </div>
@@ -1364,9 +1368,17 @@ function RadarChart({ items }: { items: { label: string; value: number }[] }) {
 
 /** Donut — operatorlara müraciət */
 function DonutChart({ items }: { items: { label: string; value: number }[] }) {
-  const rows = items.filter((i) => i.value > 0)
+  const real = items.some((i) => i.value > 0)
+  const DEMO = [9, 6, 4, 3, 2, 2, 1, 1]
+  const rows = real
+    ? items.filter((i) => i.value > 0)
+    : items.map((it, i) => ({
+        label: it.label || `Operator ${i + 1}`,
+        value: DEMO[i % DEMO.length],
+      }))
   const total = rows.reduce((a, b) => a + b.value, 0)
   if (total === 0) return <EmptyChart />
+  const isDemo = !real
   const R = 54
   const CIRC = 2 * Math.PI * R
   let off = 0
@@ -1423,6 +1435,11 @@ function DonutChart({ items }: { items: { label: string; value: number }[] }) {
             </span>
           </div>
         ))}
+        {isDemo && (
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 pt-1">
+            Nümunə görüntü — bugün hələ çağırış yoxdur. Operator paneldə «Növbəti» basan kimi real rəqəmlər görünəcək.
+          </p>
+        )}
       </div>
     </div>
   )
