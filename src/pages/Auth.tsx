@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Icon } from '@iconify/react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { appUrl } from '../lib/url'
 
 export default function Auth() {
   const [mode, setMode] = useState<'login' | 'signup'>('login')
@@ -21,7 +22,7 @@ export default function Auth() {
     setMsg(null)
     try {
       if (mode === 'signup') {
-        const redirect = `${window.location.origin}${import.meta.env.BASE_URL}#/dashboard`
+        const redirect = `${appUrl()}#/dashboard`
         const { error } = await supabase.auth.signUp({
           email,
           password,

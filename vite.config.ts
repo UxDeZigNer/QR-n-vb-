@@ -4,6 +4,7 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/QR-n-vb-/',
+  // Relativ base — həm GitHub Pages (/QR-n-vb-/), həm kök domen (qr.free.je) üçün işləyir
+  base: './',
   plugins: [react(), tailwindcss()],
 })

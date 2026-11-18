@@ -6,7 +6,9 @@ import { subscribeBranch } from '../lib/queue'
 import { getStoredTheme, toggleTheme, type Theme } from '../lib/theme'
 import type { Branch, BranchLive, Operator, Service, Ticket } from '../lib/types'
 
-const APP_URL = import.meta.env.VITE_APP_URL ?? window.location.origin + import.meta.env.BASE_URL
+import { appUrl } from '../lib/url'
+
+const APP_URL = appUrl()
 const queueUrl = (slug: string) => `${APP_URL}#/q/${slug}`
 const panelUrl = (slug: string) => `${APP_URL}#/panel/${slug}`
 const displayUrl = (slug: string) => `${APP_URL}#/display/${slug}`
