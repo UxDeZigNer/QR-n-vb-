@@ -365,6 +365,19 @@ export default function Dashboard() {
     if (selected) await loadDetail(selected)
   }
 
+  async function resetBranchData(b: Branch) {
+    if (!confirm(`"${b.name}" filialının bütün biletləri və növbə sayğacı silinəcək. Əminsiniz?`)) return
+    const { error } = await supabase.rpc('reset_branch', { p_branch_id: b.id })
+    if (error) {
+      if (error.message.includes('reset_branch')) {
+        return flash('Əvvəl supabase/005_reset_branch.sql-ı SQL editor-də işləyin')
+      }
+      return flash(error.message)
+    }
+    if (selected?.id === b.id) await loadDetail(b)
+    flash('Datalar sıfırlandı ✓')
+  }
+
   async function saveSettings() {
     if (!selected) return
     const { error } = await supabase
@@ -779,7 +792,18 @@ export default function Dashboard() {
   // ================= BÖLMƏLƏR =================
 
   function DashboardSection() {
-    const maxCount = Math.max(...week.map((w) => w.count), 1)
+    const DEMO_WEEK = [4, 7, 5, 9, 6, 8, 3]
+    const weekIsDemo = week.every((w) => w.count === 0)
+    const weekShow = weekIsDemo ? week.map((w, i) => ({ ...w, count: DEMO_WEEK[i] })) : week
+    const maxCount = Math.max(...weekShow.map((w) => w.count), 1)
+
+    const radarItems = services.map((s) => ({
+      label: s.name,
+      value: todayAll.filter((t) => t.service_id === s.id).length,
+    }))
+    const radarIsDemo = !radarItems.some((i) => i.value > 0) && radarItems.length >= 3
+    const DEMO_RADAR = [6, 4, 3, 2, 2, 1, 1, 1]
+    const radarShow = radarIsDemo ? radarItems.map((it, i) => ({ ...it, value: DEMO_RADAR[i] })) : radarItems
     return (
       <div className="space-y-4 max-w-5xl">
         {/* Stat kartları */}
@@ -802,7 +826,7 @@ export default function Dashboard() {
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-4">Son 7 gün</h3>
             <div className="space-y-2.5">
-              {week.map((w, i) => (
+              {weekShow.map((w, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <span className="w-8 text-[10px] text-slate-400 dark:text-slate-500 shrink-0">{w.label}</span>
                   <div className="flex-1 h-5 rounded-full bg-slate-100 dark:bg-slate-800/60 overflow-hidden">
@@ -817,6 +841,11 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
+            {weekIsDemo && (
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-3">
+                Nümunə görüntü — bu həftə hələ ziyarət yoxdur
+              </p>
+            )}
           </div>
 
           {/* Xidmət radarı */}
@@ -825,12 +854,12 @@ export default function Dashboard() {
               <Icon icon="lucide:radar" className="w-4 h-4 text-brand-600 dark:text-brand-400" />
               Xidmətə gələnlər (bugün)
             </h3>
-            <RadarChart
-              items={services.map((s) => ({
-                label: s.name,
-                value: todayAll.filter((t) => t.service_id === s.id).length,
-              }))}
-            />
+            <RadarChart items={radarShow} />
+            {radarIsDemo && (
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-1">
+                Nümunə görüntü — bugün hələ ziyarət yoxdur
+              </p>
+            )}
           </div>
 
           {/* Operator donut */}
@@ -1041,6 +1070,14 @@ export default function Dashboard() {
                 >
                   <Icon icon="lucide:pencil" className="w-3.5 h-3.5" />
                   Düzəliş
+                </button>
+                <button
+                  onClick={() => resetBranchData(b)}
+                  className="rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:border-red-400 hover:text-red-600 dark:hover:text-red-400 flex items-center gap-1"
+                  title="Bütün biletləri və sayğacı sil"
+                >
+                  <Icon icon="lucide:rotate-ccw" className="w-3.5 h-3.5" />
+                  Datanı sıfırla
                 </button>
                 {selected?.id === b.id && (
                   <span className="text-xs text-brand-700 dark:text-brand-300 font-semibold px-2 py-1.5 flex items-center gap-1">
