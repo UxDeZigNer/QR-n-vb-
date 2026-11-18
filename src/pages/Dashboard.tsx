@@ -792,18 +792,12 @@ export default function Dashboard() {
   // ================= BÖLMƏLƏR =================
 
   function DashboardSection() {
-    const DEMO_WEEK = [4, 7, 5, 9, 6, 8, 3]
-    const weekIsDemo = week.every((w) => w.count === 0)
-    const weekShow = weekIsDemo ? week.map((w, i) => ({ ...w, count: DEMO_WEEK[i] })) : week
-    const maxCount = Math.max(...weekShow.map((w) => w.count), 1)
+    const maxCount = Math.max(...week.map((w) => w.count), 1)
 
     const radarItems = services.map((s) => ({
       label: s.name,
       value: todayAll.filter((t) => t.service_id === s.id).length,
     }))
-    const radarIsDemo = !radarItems.some((i) => i.value > 0) && radarItems.length >= 3
-    const DEMO_RADAR = [6, 4, 3, 2, 2, 1, 1, 1]
-    const radarShow = radarIsDemo ? radarItems.map((it, i) => ({ ...it, value: DEMO_RADAR[i] })) : radarItems
     return (
       <div className="space-y-4 max-w-5xl">
         {/* Stat kartları */}
@@ -826,7 +820,7 @@ export default function Dashboard() {
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-4">Son 7 gün</h3>
             <div className="space-y-2.5">
-              {weekShow.map((w, i) => (
+              {week.map((w, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <span className="w-8 text-[10px] text-slate-400 dark:text-slate-500 shrink-0">{w.label}</span>
                   <div className="flex-1 h-5 rounded-full bg-slate-100 dark:bg-slate-800/60 overflow-hidden">
@@ -841,11 +835,6 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-            {weekIsDemo && (
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-3">
-                Nümunə görüntü — bu həftə hələ ziyarət yoxdur
-              </p>
-            )}
           </div>
 
           {/* Xidmət radarı */}
@@ -854,12 +843,7 @@ export default function Dashboard() {
               <Icon icon="lucide:radar" className="w-4 h-4 text-brand-600 dark:text-brand-400" />
               Xidmətə gələnlər (bugün)
             </h3>
-            <RadarChart items={radarShow} />
-            {radarIsDemo && (
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-1">
-                Nümunə görüntü — bugün hələ ziyarət yoxdur
-              </p>
-            )}
+            <RadarChart items={radarItems} />
           </div>
 
           {/* Operator donut */}
@@ -1473,7 +1457,7 @@ function EmptyChart() {
 /** Radar — xidmətə gələnlər */
 function RadarChart({ items }: { items: { label: string; value: number }[] }) {
   const n = items.length
-  if (n < 3) return <EmptyChart />
+  if (n < 3 || items.every((i) => i.value === 0)) return <EmptyChart />
   const C = 130
   const R = 88
   const max = Math.max(...items.map((i) => i.value), 1)
@@ -1531,17 +1515,9 @@ function RadarChart({ items }: { items: { label: string; value: number }[] }) {
 /** Donut — operatorlara müraciət (monoton mavi, hover-da ad+pay) */
 function DonutChart({ items }: { items: { label: string; value: number }[] }) {
   const [hover, setHover] = useState<number | null>(null)
-  const real = items.some((i) => i.value > 0)
-  const DEMO = [9, 6, 4, 3, 2, 2, 1, 1]
-  const rows = real
-    ? items.filter((i) => i.value > 0)
-    : items.map((it, i) => ({
-        label: it.label || `Operator ${i + 1}`,
-        value: DEMO[i % DEMO.length],
-      }))
+  const rows = items.filter((i) => i.value > 0)
   const total = rows.reduce((a, b) => a + b.value, 0)
   if (total === 0) return <EmptyChart />
-  const isDemo = !real
   const CX = 90
   const R = 64
   const CIRC = 2 * Math.PI * R
@@ -1592,34 +1568,27 @@ function DonutChart({ items }: { items: { label: string; value: number }[] }) {
             <text x={CX} y="76" textAnchor="middle" className="fill-slate-500 dark:fill-slate-400 text-[11px] font-semibold">
               {h.label.length > 14 ? `${h.label.slice(0, 13)}…` : h.label}
             </text>
-            <text x={CX} y="104" textAnchor="middle" className="fill-slate-800 dark:fill-slate-100 text-4xl font-black tabular-nums">
+            <text x={CX} y="102" textAnchor="middle" className="fill-slate-800 dark:fill-slate-100 text-3xl font-black tabular-nums">
               {h.value}
             </text>
-            <text x={CX} y="124" textAnchor="middle" className="fill-slate-400 dark:fill-slate-500 text-[11px]">
+            <text x={CX} y="120" textAnchor="middle" className="fill-slate-400 dark:fill-slate-500 text-[10px]">
               {Math.round((h.value / total) * 100)}% pay
             </text>
           </>
         ) : (
           <>
-            <text x={CX} y="90" textAnchor="middle" className="fill-slate-800 dark:fill-slate-100 text-4xl font-black tabular-nums">
+            <text x={CX} y="88" textAnchor="middle" className="fill-slate-800 dark:fill-slate-100 text-3xl font-black tabular-nums">
               {total}
             </text>
-            <text x={CX} y="110" textAnchor="middle" className="fill-slate-400 dark:fill-slate-500 text-[11px]">
+            <text x={CX} y="107" textAnchor="middle" className="fill-slate-400 dark:fill-slate-500 text-[10px]">
               müraciət
             </text>
           </>
         )}
       </svg>
-      {isDemo && (
-        <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-4 max-w-[240px]">
-          Nümunə görüntü — bugün hələ çağırış yoxdur. Operator paneldə «Növbəti» basan kimi real rəqəmlər görünəcək.
-        </p>
-      )}
-      {!isDemo && (
-        <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-4">
-          Dilimlərin üzərinə gəl — ad, say və pay görünür
-        </p>
-      )}
+      <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-4">
+        Dilimlərin üzərinə gəl — ad, say və pay görünür
+      </p>
     </div>
   )
 }
