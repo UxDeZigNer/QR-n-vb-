@@ -68,7 +68,7 @@ jobs:
             set mirror:parallel-transfer-count 4;
             set mirror:set-permissions off;
             open -u ${FTP_USER},${FTP_PASS} ${FTP_HOST};
-            mirror -R --delete --verbose=1 ./dist/ /htdocs/
+            mirror -R --delete --verbose=1 ./dist/ /qr.free.je/htdocs/
           "
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
