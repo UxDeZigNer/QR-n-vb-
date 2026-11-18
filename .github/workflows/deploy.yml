@@ -66,8 +66,9 @@ jobs:
             set ftp:ssl-allow no;
             set net:max-retries 3;
             set mirror:parallel-transfer-count 4;
+            set mirror:set-permissions off;
             open -u ${FTP_USER},${FTP_PASS} ${FTP_HOST};
-            mirror -R --delete --verbose=1 ./dist/ /
+            mirror -R --delete --verbose=1 ./dist/ /htdocs/
           "
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
