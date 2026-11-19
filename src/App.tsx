@@ -5,6 +5,7 @@ import Operator from './pages/Operator'
 import Display from './pages/Display'
 import Dashboard from './pages/Dashboard'
 import Auth from './pages/Auth'
+import ResetPassword from './pages/ResetPassword'
 
 export default function App() {
   // HashRouter — GitHub Pages-də server tərəfli rewrite olmadan işləyir
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/panel/:slug" element={<Operator />} />
         <Route path="/display/:slug" element={<Display />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/dashboard/*" element={<Dashboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -8,5 +8,7 @@ if (!url || !anonKey) {
 }
 
 export const supabase = createClient(url ?? '', anonKey ?? '', {
+  // PKCE — HashRouter ilə stabil: `?code=` query-də qalır, hash (`#/reset-password`) silinmir
+  auth: { flowType: 'pkce' },
   realtime: { params: { eventsPerSecond: 10 } },
 })

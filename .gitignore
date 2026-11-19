@@ -19,6 +19,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Sessiya qeydləri — gizli token-lər var, repoya düşməməlidir
+SESSION_LOG.md
+
 # Editor
 .vscode/*
 !.vscode/extensions.json

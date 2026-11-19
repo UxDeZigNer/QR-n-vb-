@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { appUrl } from '../lib/url'
 
 export default function Auth() {
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -30,6 +30,12 @@ export default function Auth() {
         })
         if (error) throw error
         setMsg('Təsdiq linki e-poçtunuza göndərildi — linkə keçin və daxil olun.')
+      } else if (mode === 'forgot') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${appUrl()}#/reset-password`,
+        })
+        if (error) throw error
+        setMsg('Bərpa linki e-poçtunuza göndərildi — linkə keçin və yeni şifrə təyin edin.')
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
@@ -51,10 +57,14 @@ export default function Auth() {
         </a>
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 mt-3 shadow-sm">
           <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">
-            {mode === 'login' ? 'Daxil ol' : 'Hesab yarat'}
+            {mode === 'login' ? 'Daxil ol' : mode === 'signup' ? 'Hesab yarat' : 'Şifrəni unutdum'}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {mode === 'login' ? 'Növbə panelinə giriş' : 'Növbə sisteminizi bir neçə dəqiqəyə qurun'}
+            {mode === 'login'
+              ? 'Növbə panelinə giriş'
+              : mode === 'signup'
+                ? 'Növbə sisteminizi bir neçə dəqiqəyə qurun'
+                : 'E-poçtunuza bərpa linki göndərəcəyik'}
           </p>
 
           <form onSubmit={submit} className="mt-5 space-y-3">
@@ -86,15 +96,34 @@ export default function Auth() {
               placeholder="E-poçt"
               className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-3 py-2.5 outline-none focus:border-brand-500"
             />
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Şifrə"
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-3 py-2.5 outline-none focus:border-brand-500"
-            />
+            {mode !== 'forgot' && (
+              <>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Şifrə"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-3 py-2.5 outline-none focus:border-brand-500"
+                />
+                {mode === 'login' && (
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('forgot')
+                        setMsg(null)
+                        setError(null)
+                      }}
+                      className="text-sm text-slate-500 dark:text-slate-400 hover:text-brand-600"
+                    >
+                      Şifrəni unutdum?
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
 
             {error && <div className="text-sm text-red-600">{error}</div>}
             {msg && <div className="text-sm text-emerald-600">{msg}</div>}
@@ -103,15 +132,15 @@ export default function Auth() {
               disabled={busy}
               className="w-full rounded-xl bg-brand-600 text-white font-semibold py-2.5 hover:bg-brand-700 disabled:opacity-50"
             >
-              {busy ? 'Gözləyin…' : mode === 'login' ? 'Daxil ol' : 'Qeydiyyat'}
+              {busy ? 'Gözləyin…' : mode === 'login' ? 'Daxil ol' : mode === 'signup' ? 'Qeydiyyat' : 'Link göndər'}
             </button>
           </form>
 
           <button
-            onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+            onClick={() => setMode(mode === 'signup' ? 'login' : mode === 'login' ? 'signup' : 'login')}
             className="w-full text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 mt-4"
           >
-            {mode === 'login' ? 'Hesab yoxdur? Qeydiyyat' : 'Hesab var? Daxil ol'}
+            {mode === 'login' ? 'Hesab yoxdur? Qeydiyyat' : mode === 'signup' ? 'Hesab var? Daxil ol' : 'Girişə qayıt'}
           </button>
         </div>
       </div>
