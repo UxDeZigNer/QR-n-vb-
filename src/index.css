@@ -14,11 +14,187 @@
   --color-brand-700: #1457e1;
   --color-brand-800: #1747b6;
   --color-brand-900: #193f8f;
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
 html,
 body,
 #root {
   min-height: 100%;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Klaviatura fokusu — həmişə görünür olsun */
+:focus-visible {
+  outline: 2px solid #1b6ef5;
+  outline-offset: 2px;
+}
+
+/* ===== Scroll-reveal ===== */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ===== Glass (frosted) ===== */
+.glass {
+  background-color: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(16px) saturate(160%);
+}
+.dark .glass {
+  background-color: rgba(15, 23, 42, 0.55);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+/* Glass kart — yüngül kölgə ilə ayrılır */
+.glass-card {
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    0 14px 34px -22px rgba(15, 23, 42, 0.25);
+}
+.glass-strong {
+  background-color: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+}
+.dark .glass-strong {
+  background-color: rgba(2, 6, 23, 0.7);
+}
+
+/* ===== Gradient mətn ===== */
+.text-gradient {
+  background-image: linear-gradient(100deg, #1b6ef5 0%, #38bdf8 50%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ===== Fon şəbəkəsi ===== */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(100, 116, 139, 0.14) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(100, 116, 139, 0.14) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 25%, #000 35%, transparent 78%);
+  mask-image: radial-gradient(ellipse 75% 65% at 50% 25%, #000 35%, transparent 78%);
+}
+.dark .bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(148, 163, 184, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
+}
+
+/* ===== Animasiyalar ===== */
+@keyframes qrm-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+.anim-float {
+  animation: qrm-float 7s ease-in-out infinite;
+}
+
+@keyframes qrm-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(40px, -30px, 0) scale(1.08);
+  }
+  66% {
+    transform: translate3d(-30px, 25px, 0) scale(0.96);
+  }
+}
+.anim-drift {
+  animation: qrm-drift 26s ease-in-out infinite;
+}
+
+@keyframes qrm-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  80%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+.anim-ping {
+  animation: qrm-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes qrm-sheen {
+  0% {
+    transform: translateX(-130%);
+  }
+  100% {
+    transform: translateX(230%);
+  }
+}
+.btn-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.btn-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-130%);
+  pointer-events: none;
+}
+.btn-sheen:hover::after,
+.btn-sheen:focus-visible::after {
+  animation: qrm-sheen 0.8s ease;
+}
+
+/* Kart qaldırma */
+.card-hover {
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 48px -24px rgba(15, 23, 42, 0.3);
+}
+
+/* Həssas hərəkət rejimi — bütün qeyri-zəruri hərəkətləri dayandır */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .anim-float,
+  .anim-drift,
+  .anim-ping,
+  .btn-sheen::after {
+    animation: none !important;
+  }
+  .card-hover:hover {
+    transform: none;
+  }
 }
