@@ -467,10 +467,18 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 overflow-x-hidden">
+    <div className="relative min-h-screen bg-slate-100 dark:bg-slate-950 overflow-x-hidden">
+      {/* ================= FON (landing ilə eyni naxış) ================= */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <div className="absolute inset-0 bg-grid opacity-70" />
+        <div className="anim-drift absolute -left-32 -top-24 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(27,110,245,.22),transparent_65%)] blur-2xl" />
+        <div className="anim-drift absolute -right-28 top-1/3 h-[380px] w-[380px] rounded-full bg-[radial-gradient(circle,rgba(139,92,246,.18),transparent_65%)] blur-2xl" />
+        <div className="anim-drift absolute bottom-0 left-1/4 h-[340px] w-[340px] rounded-full bg-[radial-gradient(circle,rgba(56,189,248,.18),transparent_65%)] blur-2xl" />
+      </div>
+
       {/* ================= SIDEBAR ================= */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-transform duration-200 ${
+        className={`glass-strong fixed inset-y-0 left-0 z-40 w-64 border-r border-slate-200/70 dark:border-slate-800/80 flex flex-col transition-transform duration-200 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0`}
       >
@@ -557,9 +565,9 @@ export default function Dashboard() {
       )}
 
       {/* ================= ƏSAS SÜTUN ================= */}
-      <div className="md:pl-64 flex flex-col min-h-screen">
+      <div className="relative z-10 md:pl-64 flex flex-col min-h-screen">
         {/* ---- HEADER ---- */}
-        <header className="sticky top-0 z-20 h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-6">
+        <header className="glass-strong sticky top-0 z-20 h-14 border-b border-slate-200/70 dark:border-slate-800/80 flex items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -614,7 +622,7 @@ export default function Dashboard() {
               {notifOpen && (
                 <>
                   <div className="fixed inset-0" onClick={() => setNotifOpen(false)} />
-                  <div className="absolute right-0 top-11 w-72 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+                  <div className="absolute right-0 top-11 w-72 glass glass-card rounded-2xl shadow-xl overflow-hidden">
                     <div className="px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800">
                       Bugünkü ziyarətlər
                     </div>
@@ -659,7 +667,7 @@ export default function Dashboard() {
               {userMenu && (
                 <>
                   <div className="fixed inset-0" onClick={() => setUserMenu(false)} />
-                  <div className="absolute right-0 top-11 w-56 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+                  <div className="absolute right-0 top-11 w-56 glass glass-card rounded-2xl shadow-xl overflow-hidden">
                     <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
                       <div className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
                         {userName || 'Ad yoxdur'}
@@ -692,8 +700,9 @@ export default function Dashboard() {
 
         {/* ---- MƏZMUN ---- */}
         <main className="flex-1 p-4 sm:p-6 min-w-0 w-full max-w-5xl mx-auto">
+          <div key={section} className="section-in">
           {!selected && section !== 'branches' ? (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center text-slate-400 dark:text-slate-500">
+            <div className="glass glass-card rounded-2xl p-12 text-center text-slate-400 dark:text-slate-500">
               Sol menyu → Filial seçin (və ya «Filiallar» bölməsində yaradın)
             </div>
           ) : section === 'dashboard' ? (
@@ -713,6 +722,7 @@ export default function Dashboard() {
           ) : (
             SettingsSection()
           )}
+          </div>
         </main>
       </div>
 
@@ -723,7 +733,7 @@ export default function Dashboard() {
           onClick={closeBranchModal}
         >
           <div
-            className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl p-5"
+            className="w-full max-w-sm glass glass-card rounded-2xl shadow-xl p-5"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
@@ -780,7 +790,7 @@ export default function Dashboard() {
               <button
                 onClick={saveBranch}
                 disabled={busyBr}
-                className="flex-1 rounded-xl bg-brand-600 text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
+                className="flex-1 btn-primary rounded-xl bg-brand-600 text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
               >
                 {busyBr ? 'Gözləyin…' : brEdit ? 'Yenilə' : 'Yarat'}
               </button>
@@ -819,7 +829,7 @@ export default function Dashboard() {
 
         {/* 7 günlük qrafik */}
         <div className="grid lg:grid-cols-3 gap-3">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+          <div className="glass glass-card rounded-2xl p-5">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-4">Son 7 gün</h3>
             <div className="space-y-2.5">
               {week.map((w, i) => (
@@ -840,7 +850,7 @@ export default function Dashboard() {
           </div>
 
           {/* Xidmət radarı */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+          <div className="glass glass-card rounded-2xl p-5">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-2 flex items-center gap-1.5">
               <Icon icon="lucide:radar" className="w-4 h-4 text-brand-600 dark:text-brand-400" />
               Xidmətə gələnlər (bugün)
@@ -849,7 +859,7 @@ export default function Dashboard() {
           </div>
 
           {/* Operator donut */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+          <div className="glass glass-card rounded-2xl p-5">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-2 flex items-center gap-1.5">
               <Icon icon="lucide:chart-pie" className="w-4 h-4 text-brand-600 dark:text-brand-400" />
               Operatora müraciət (bugün)
@@ -864,7 +874,7 @@ export default function Dashboard() {
         </div>
 
         {/* Bugünkü ziyarətlər */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+        <div className="glass glass-card rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Bugünkü ziyarətlər</h3>
             <button
@@ -926,7 +936,7 @@ export default function Dashboard() {
                 href={queueUrl(selected!.slug)}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700 flex items-center gap-1.5"
+                className="btn-primary rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700 flex items-center gap-1.5"
               >
                 Aç
                 <Icon icon="lucide:arrow-right" className="w-4 h-4" />
@@ -996,7 +1006,7 @@ export default function Dashboard() {
             href={displayUrl(selected!.slug)}
             target="_blank"
             rel="noreferrer"
-            className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700"
+            className="btn-primary rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700"
           >
               <Icon icon="lucide:monitor" className="w-4 h-4 inline-block mr-1.5 -mt-0.5" />
               Ekranı aç
@@ -1045,7 +1055,7 @@ export default function Dashboard() {
                 {selected?.id !== b.id && (
                   <button
                     onClick={() => openBranch(b)}
-                    className="rounded-lg bg-brand-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-brand-700"
+                    className="btn-primary rounded-lg bg-brand-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-brand-700"
                   >
                     Seç
                   </button>
@@ -1267,7 +1277,7 @@ export default function Dashboard() {
               <button
                 onClick={saveAccount}
                 disabled={busyAcc}
-                className="rounded-xl bg-brand-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
+                className="btn-primary rounded-xl bg-brand-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
               >
                 {busyAcc ? 'Gözləyin…' : 'Saxla'}
               </button>
@@ -1313,7 +1323,7 @@ export default function Dashboard() {
               <button
                 onClick={savePassword}
                 disabled={busyPwd}
-                className="rounded-xl bg-brand-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
+                className="btn-primary rounded-xl bg-brand-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
               >
                 {busyPwd ? 'Gözləyin…' : 'Şifrəni yenilə'}
               </button>
@@ -1353,7 +1363,7 @@ export default function Dashboard() {
           </div>
           <button
             onClick={saveSettings}
-            className="rounded-xl bg-brand-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-700"
+            className="btn-primary rounded-xl bg-brand-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-700"
           >
             Saxla
           </button>
@@ -1378,7 +1388,7 @@ function Card({
   children: React.ReactNode
 }) {
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 max-w-5xl">
+    <div className="glass glass-card rounded-2xl p-5 max-w-5xl">
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-bold text-slate-800 dark:text-slate-100">{title}</h2>
         {action}
@@ -1392,7 +1402,7 @@ function AddBtn({ onClick, label }: { onClick: () => void; label: string }) {
   return (
     <button
       onClick={onClick}
-      className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700 shrink-0"
+      className="btn-primary rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700 shrink-0"
     >
       + {label}
     </button>
@@ -1403,7 +1413,7 @@ function StatCard({ label, value, accent }: { label: string; value: string; acce
   return (
     <div
       className={`rounded-2xl border p-4 ${
-        accent ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+        accent ? 'bg-brand-600 border-brand-600 text-white' : 'glass glass-card border-transparent'
       }`}
     >
       <div className={`text-xs ${accent ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}`}>{label}</div>
@@ -1432,7 +1442,7 @@ function QuickBtn({
       href={href}
       target={external ? '_blank' : undefined}
       rel={external ? 'noreferrer' : undefined}
-      className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:border-brand-400 transition"
+      className="glass glass-card rounded-2xl p-4 card-hover hover:border-brand-400/60 transition"
     >
       <Icon icon={icon} className="w-6 h-6 text-brand-600 dark:text-brand-400" />
       <div className="font-semibold text-slate-800 dark:text-slate-100 text-sm mt-2">{title}</div>

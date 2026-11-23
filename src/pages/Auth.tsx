@@ -57,7 +57,7 @@ export default function Auth() {
         </a>
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 mt-3 shadow-sm">
           <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">
-            {mode === 'login' ? 'Daxil ol' : mode === 'signup' ? 'Hesab yarat' : 'Şifrəni unutdum'}
+            {mode === 'login' ? 'Daxil ol' : mode === 'signup' ? 'Hesab yarat' : 'Şifrəni unutdun'}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             {mode === 'login'
@@ -118,7 +118,7 @@ export default function Auth() {
                       }}
                       className="text-sm text-slate-500 dark:text-slate-400 hover:text-brand-600"
                     >
-                      Şifrəni unutdum?
+                      Şifrəni unutdun?
                     </button>
                   </div>
                 )}

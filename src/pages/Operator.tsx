@@ -139,7 +139,7 @@ export default function Operator() {
   const opName = (id: string | null) =>
     id ? (operators.find((o) => o.id === id)?.name ?? '—') : null
 
-  if (!slug) return <BranchPicker />
+  if (!slug) return <PanelDemo />
   if (!branch) return <Center>Yüklənir…</Center>
 
   return (
@@ -378,42 +378,121 @@ function Chip({
   )
 }
 
-/** /panel — hansı filialda işlədiyini seçir */
-function BranchPicker() {
-  const [branches, setBranches] = useState<Branch[]>([])
+/**
+ * /panel (slug-sız) — DEMO panel + qeydiyyat təşviqi.
+ * Bura real filiallar göstərilmir (əvvəl bütün istifadəçilərin filialları
+ * sıralanırdı — sızıntı idi). Yalnız nümunə paneldir.
+ */
+function PanelDemo() {
+  const [nudge, setNudge] = useState(false)
 
-  useEffect(() => {
-    void supabase
-      .from('branches')
-      .select('*')
-      .eq('is_active', true)
-      .order('name')
-      .then(({ data }) => setBranches((data ?? []) as Branch[]))
-  }, [])
+  const demoWaiting = [
+    { code: 'A-13', svc: 'Kassir' },
+    { code: 'A-14', svc: 'Məsləhət' },
+    { code: 'A-15', svc: 'Kassir' },
+  ]
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-800/40 grid place-items-center px-6">
-      <div className="w-full max-w-md">
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">Operator paneli</h1>
-        <p className="text-slate-500 dark:text-slate-400 mb-6 text-sm">Filialınızı seçin</p>
-        <div className="space-y-2">
-          {branches.map((b) => (
-            <a
-              key={b.id}
-              href={`#/panel/${b.slug}`}
-              className="block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 hover:border-brand-400 transition"
-            >
-              <div className="font-semibold text-slate-800 dark:text-slate-100">{b.name}</div>
-              <div className="text-xs text-slate-400 dark:text-slate-500">/q/{b.slug}</div>
-            </a>
-          ))}
-          {branches.length === 0 && (
-            <div className="text-center text-sm text-slate-400 dark:text-slate-500 py-8">
-              Hələ filial yaradılmayıb — Dashboard-dan yaradın
-            </div>
-          )}
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 relative overflow-hidden">
+      {/* Fon — landing ilə eyni naxış (şəbəkə + drift orbs) */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-grid opacity-70" />
+      <div
+        aria-hidden
+        className="anim-drift absolute -left-32 -top-24 h-96 w-96 rounded-full bg-[radial-gradient(circle,rgba(27,110,245,.3),transparent_65%)] blur-2xl"
+      />
+      <div
+        aria-hidden
+        className="anim-drift absolute -right-28 top-40 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(139,92,246,.24),transparent_65%)] blur-2xl"
+      />
+
+      {/* Header */}
+      <header className="relative z-10 max-w-lg mx-auto px-6 py-5 flex items-center justify-between">
+        <a href="#/" className="flex items-center gap-2 font-extrabold tracking-tight text-slate-800 dark:text-slate-100">
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-brand-600 to-brand-500 text-white shadow-lg shadow-brand-600/30">
+            <Icon icon="lucide:qr-code" className="h-4.5 w-4.5" />
+          </span>
+          QR Növbə
+        </a>
+        <span className="glass rounded-full px-3 py-1 text-xs font-bold text-brand-700 dark:text-brand-300">DEMO</span>
+      </header>
+
+      <main className="relative z-10 max-w-lg mx-auto px-6 pb-16 space-y-5">
+        <div className="pt-2 text-center">
+          <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100">Operator paneli</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Belə işləyir — nümunə rejimdə</p>
         </div>
-      </div>
+
+        {/* Nümunə panel — real panelin vizual surəti */}
+        <div className="glass glass-card overflow-hidden rounded-3xl">
+          <div className="flex items-center justify-between border-b border-slate-200/70 px-4 py-3 dark:border-slate-700/60">
+            <div className="min-w-0">
+              <div className="truncate font-bold text-slate-800 dark:text-slate-100">Nümunə filial</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">Operator paneli</div>
+            </div>
+            <div className="text-right">
+              <div className="text-xl font-black leading-none tabular-nums text-brand-600">3</div>
+              <div className="text-[10px] text-slate-400 dark:text-slate-500">gözləyir</div>
+            </div>
+          </div>
+
+          <div className="space-y-4 p-4">
+            {/* Hazırda çağırılan */}
+            <div className="rounded-2xl bg-slate-900 p-5 text-center text-white dark:bg-slate-800">
+              <div className="text-xs opacity-70">Hazırda çağırılan</div>
+              <div className="my-1 text-5xl font-black tabular-nums">A-12</div>
+              <div className="text-xs opacity-70">Kassir</div>
+            </div>
+
+            {/* Növbəti — kliklənəndə qeydiyyata yönləndirir */}
+            <button
+              onClick={() => setNudge(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-600 py-4 text-lg font-bold text-white shadow-md transition hover:bg-brand-700"
+            >
+              <Icon icon="lucide:play" className="h-5 w-5" />
+              Növbəti
+            </button>
+            {nudge && (
+              <p className="text-center text-xs font-medium text-brand-600 dark:text-brand-400">
+                Bu demo-dur — real panel üçün qeydiyyatdan keçin ↓
+              </p>
+            )}
+
+            {/* Gözləyənlər */}
+            <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200/70 bg-white/70 dark:divide-slate-800 dark:border-slate-700/60 dark:bg-slate-900/70">
+              <div className="px-4 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300">Gözləyənlər (3)</div>
+              {demoWaiting.map((w, i) => (
+                <div key={w.code} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+                  <span className="w-4 shrink-0 text-xs text-slate-400 dark:text-slate-500">{i + 1}</span>
+                  <span className="font-mono font-bold text-slate-800 dark:text-slate-100">{w.code}</span>
+                  <span className="truncate text-slate-500 dark:text-slate-400">· {w.svc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Qeydiyyat təşviqi */}
+        <div className="glass glass-card rounded-3xl p-6 text-center">
+          <h2 className="text-lg font-black text-slate-800 dark:text-slate-100">Öz panelinizi qurun</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Filial yaradın, QR-u çap edin, növbəni idarə edin — bir neçə dəqiqəyə.
+          </p>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <a
+              href="#/auth"
+              className="btn-sheen flex-1 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-5 py-3 font-semibold text-white shadow-lg shadow-brand-600/30 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
+            >
+              Pulsuz qeydiyyat
+            </a>
+            <a
+              href="#/auth"
+              className="glass rounded-xl px-5 py-3 font-semibold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-500/40 hover:text-brand-600 dark:text-slate-200 dark:hover:text-brand-400"
+            >
+              Hesabım var
+            </a>
+          </div>
+        </div>
+      </main>
     </div>
   )
 }
