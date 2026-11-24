@@ -638,8 +638,17 @@ export default function Dashboard() {
                       </div>
                     ))}
                     {recent.length === 0 && (
-                      <div className="px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
-                        Bugün ziyarət yoxdur
+                      <div className="flex flex-col items-center px-4 py-6 text-center">
+                        <Icon
+                          icon="lucide:bell-off"
+                          className="h-5 w-5 text-slate-300 dark:text-slate-600"
+                        />
+                        <div className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                          Bugün ziyarət yoxdur
+                        </div>
+                        <div className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
+                          Yeni qeydlər burada görünəcək
+                        </div>
                       </div>
                     )}
                   </div>
@@ -814,10 +823,31 @@ export default function Dashboard() {
       <div className="space-y-4 max-w-5xl">
         {/* Stat kartları */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard label="Hazırda çağırılan" value={live?.current_code ?? '—'} accent />
-          <StatCard label="Gözləyən" value={`${live?.waiting_count ?? 0} nəfər`} />
-          <StatCard label="Bugünkü ziyarət" value={`${todayCount}`} />
-          <StatCard label="Orta gözləmə" value={avgWait ? `${avgWait} dəq` : '—'} />
+          <StatCard
+            label="Hazırda çağırılan"
+            value={live?.current_code ?? '—'}
+            icon="lucide:bell-ring"
+            hint={live?.current_code ? 'Növbədəki ziyarətçi' : 'Çağırış olanda görünəcək'}
+            accent
+          />
+          <StatCard
+            label="Gözləyən"
+            value={`${live?.waiting_count ?? 0} nəfər`}
+            icon="lucide:users"
+            hint={(live?.waiting_count ?? 0) > 0 ? 'Növbədə gözləyənlər' : 'Növbə boşdur — ziyarətçi gözlənilir'}
+          />
+          <StatCard
+            label="Bugünkü ziyarət"
+            value={`${todayCount}`}
+            icon="lucide:calendar-check"
+            hint={todayCount > 0 ? 'Bu gün qeydə alınan' : 'İlk ziyarətçi burada görünəcək'}
+          />
+          <StatCard
+            label="Orta gözləmə"
+            value={avgWait ? `${avgWait} dəq` : '—'}
+            icon="lucide:clock"
+            hint={avgWait ? 'Son ziyarətlərin ortası' : 'Məlumat toplanır'}
+          />
         </div>
 
         {/* Sürətli keçidlər */}
@@ -847,6 +877,12 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
+            {week.every((w) => w.count === 0) && (
+              <div className="mt-3 flex items-center gap-2 rounded-xl bg-brand-600/5 px-3 py-2 text-[11px] text-slate-400 dark:text-slate-500">
+                <Icon icon="lucide:info" className="h-3.5 w-3.5 shrink-0 text-brand-500" />
+                Həftəlik ziyarət qeydləri burada toplanır — ziyarətçi gəldikcə sütunlar böyüyəcək
+              </div>
+            )}
           </div>
 
           {/* Xidmət radarı */}
@@ -909,7 +945,15 @@ export default function Dashboard() {
               </div>
             ))}
             {recent.length === 0 && (
-              <div className="text-xs text-slate-400 dark:text-slate-500 text-center py-6">Bu gün hələ ziyarət yoxdur</div>
+              <div className="flex flex-col items-center py-8 text-center">
+                <span className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-600/10 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                  <Icon icon="lucide:inbox" className="h-5 w-5" />
+                </span>
+                <div className="mt-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300">Bu gün hələ ziyarət yoxdur</div>
+                <div className="mt-1 max-w-[280px] text-xs text-slate-400 dark:text-slate-500">
+                  Ziyarətçi QR-u skan edib nömrə alanda ilk qeyd burada görünəcək
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -979,8 +1023,14 @@ export default function Dashboard() {
             </div>
           ))}
           {operators.length === 0 && (
-            <div className="text-xs text-slate-400 dark:text-slate-500 text-center py-8">
-              Hələ operator yoxdur — operatorlar öz adını paneldə seçir
+            <div className="flex flex-col items-center py-8 text-center">
+              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-600/10 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                <Icon icon="lucide:user-plus" className="h-5 w-5" />
+              </span>
+              <div className="mt-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300">Hələ operator yoxdur</div>
+              <div className="mt-1 max-w-[280px] text-xs text-slate-400 dark:text-slate-500">
+                Operator əlavə edin — panelə daxil olan kimi öz adını seçə bilər
+              </div>
             </div>
           )}
         </div>
@@ -1112,8 +1162,9 @@ export default function Dashboard() {
             </div>
           ))}
           {services.length === 0 && (
-            <div className="text-xs text-slate-400 dark:text-slate-500 text-center py-8">
-              Xidmət yoxdur — ziyarətçi birbaşa nömrə alır
+            <div className="flex items-center gap-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 px-4 py-3 text-xs text-slate-400 dark:text-slate-500">
+              <Icon icon="lucide:info" className="h-4 w-4 shrink-0 text-brand-500" />
+              Xidmət yoxdur — ziyarətçi birbaşa nömrə alır. Xidmət əlavə etsəniz, seçim siyahısı görünəcək
             </div>
           )}
         </div>
@@ -1195,8 +1246,16 @@ export default function Dashboard() {
             </tbody>
           </table>
           {historyRows.length === 0 && (
-            <div className="text-center text-sm text-slate-400 dark:text-slate-500 py-10">
-              Bu tarixlərdə ziyarət yoxdur
+            <div className="flex flex-col items-center py-10 text-center">
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-brand-600/10 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                <Icon icon="lucide:calendar-x" className="h-6 w-6" />
+              </span>
+              <div className="mt-3 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                Bu tarixlərdə ziyarət yoxdur
+              </div>
+              <div className="mt-1 max-w-[300px] text-xs text-slate-400 dark:text-slate-500">
+                Tarix aralığını dəyişin və ya ziyarətçi QR-u skan edib nömrə alanda burada görünəcək
+              </div>
             </div>
           )}
         </div>
@@ -1409,17 +1468,51 @@ function AddBtn({ onClick, label }: { onClick: () => void; label: string }) {
   )
 }
 
-function StatCard({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function StatCard({
+  label,
+  value,
+  icon,
+  hint,
+  accent,
+}: {
+  label: string
+  value: string
+  icon?: string
+  hint?: string
+  accent?: boolean
+}) {
   return (
     <div
       className={`rounded-2xl border p-4 ${
         accent ? 'bg-brand-600 border-brand-600 text-white' : 'glass glass-card border-transparent'
       }`}
     >
-      <div className={`text-xs ${accent ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}`}>{label}</div>
+      <div className="flex items-start justify-between gap-2">
+        <div className={`text-xs ${accent ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}`}>{label}</div>
+        {icon && (
+          <span
+            className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${
+              accent
+                ? 'bg-white/15'
+                : 'bg-brand-600/10 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400'
+            }`}
+          >
+            <Icon icon={icon} className={`h-4 w-4 ${accent ? 'text-white' : ''}`} />
+          </span>
+        )}
+      </div>
       <div className={`text-2xl font-black tabular-nums mt-1 ${accent ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
         {value}
       </div>
+      {hint && (
+        <div
+          className={`mt-1 flex items-center gap-1 text-[11px] leading-tight ${
+            accent ? 'text-white/60' : 'text-slate-400 dark:text-slate-500'
+          }`}
+        >
+          {hint}
+        </div>
+      )}
     </div>
   )
 }
@@ -1458,10 +1551,16 @@ function StatusBadge({ status }: { status: Ticket['status'] }) {
 
 // ================= Qrafiklər =================
 
-function EmptyChart() {
+function EmptyChart({ icon = 'lucide:bar-chart-3', hint }: { icon?: string; hint?: string }) {
   return (
-    <div className="text-xs text-slate-400 dark:text-slate-500 text-center py-10">
-      Bu gün hələ məlumat yoxdur
+    <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
+      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-brand-600/10 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+        <Icon icon={icon} className="h-6 w-6" />
+      </span>
+      <div className="mt-3 text-sm font-semibold text-slate-600 dark:text-slate-300">Bu gün hələ məlumat yoxdur</div>
+      <div className="mt-1 max-w-[240px] text-xs leading-relaxed text-slate-400 dark:text-slate-500">
+        {hint ?? 'Ziyarətçi QR-u skan edib nömrə alanda bu qrafik dolacaq'}
+      </div>
     </div>
   )
 }
@@ -1469,7 +1568,8 @@ function EmptyChart() {
 /** Radar — xidmətə gələnlər */
 function RadarChart({ items }: { items: { label: string; value: number }[] }) {
   const n = items.length
-  if (n < 3 || items.every((i) => i.value === 0)) return <EmptyChart />
+  if (n < 3 || items.every((i) => i.value === 0))
+    return <EmptyChart icon="lucide:radar" hint="Xidmət yaradıb ziyarətçi qəbul etdikcə bu qrafik dolacaq" />
   const C = 130
   const R = 88
   const max = Math.max(...items.map((i) => i.value), 1)
@@ -1529,7 +1629,8 @@ function DonutChart({ items }: { items: { label: string; value: number }[] }) {
   const [hover, setHover] = useState<number | null>(null)
   const rows = items.filter((i) => i.value > 0)
   const total = rows.reduce((a, b) => a + b.value, 0)
-  if (total === 0) return <EmptyChart />
+  if (total === 0)
+    return <EmptyChart icon="lucide:user-round-check" hint="Operatora müraciət yox — ziyarətçi nömrə aldıqca bölünür" />
   const CX = 90
   const R = 64
   const CIRC = 2 * Math.PI * R
