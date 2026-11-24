@@ -198,7 +198,7 @@ export default function Landing() {
                 href="#/panel"
                 className="text-slate-500 transition-colors hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-400"
               >
-                Operator
+                Demo
               </a>
             </nav>
 
@@ -263,7 +263,7 @@ export default function Landing() {
                 className="glass inline-flex items-center gap-2 rounded-xl px-7 py-3.5 font-semibold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-500/40 hover:text-brand-600 dark:text-slate-200 dark:hover:text-brand-400"
               >
                 <Icon icon="lucide:monitor-play" className="h-5 w-5" />
-                Operator paneli
+                Demo panel
               </a>
             </div>
 
@@ -469,7 +469,7 @@ export default function Landing() {
                     href="#/panel"
                     className="rounded-xl border border-slate-200/80 px-8 py-3.5 font-semibold text-slate-600 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-500/40 hover:text-brand-600 dark:border-slate-700/80 dark:text-slate-300 dark:hover:text-brand-400"
                   >
-                    Operator panelini gör
+                    Demo paneli gör
                   </a>
                 </div>
               </div>
@@ -505,7 +505,7 @@ export default function Landing() {
                 href="#/panel"
                 className="text-slate-500 transition-colors hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-400"
               >
-                Operator
+                Demo
               </a>
               <a
                 href="#/auth"
