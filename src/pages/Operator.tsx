@@ -239,7 +239,7 @@ export default function Operator() {
               <select
                 value={meId}
                 onChange={(e) => pickMe(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white/80 px-2.5 py-2.5 text-sm text-slate-800 outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                className="w-full rounded-xl border border-slate-200 bg-white/80 py-2.5 pl-3 pr-9 text-sm text-slate-800 outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                 title="Çağırılan nömrə sizə bağlanır"
               >
                 <option value="">Operator seçin</option>

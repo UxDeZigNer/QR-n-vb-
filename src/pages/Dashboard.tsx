@@ -501,7 +501,7 @@ export default function Dashboard() {
               const b = branches.find((x) => x.id === e.target.value)
               if (b) openBranch(b)
             }}
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 outline-none focus:border-brand-500 bg-slate-50 dark:bg-slate-800/40"
+            className="w-full rounded-xl border border-slate-200 py-2 pl-3 pr-9 text-sm font-semibold text-slate-700 outline-none focus:border-brand-500 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-200"
           >
             {branches.length === 0 && <option value="">Filial yoxdur</option>}
             {branches.map((b) => (
