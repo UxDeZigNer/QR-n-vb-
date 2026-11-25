@@ -143,21 +143,104 @@ export default function Operator() {
   if (!branch) return <Center>Yüklənir…</Center>
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-800/40">
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3">
-        <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <div className="font-bold text-slate-800 dark:text-slate-100 truncate">{branch.name}</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">Operator paneli</div>
+    <div className="relative min-h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
+      {/* Fon — dashboard ilə eyni naxış */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-grid opacity-70" />
+      <div
+        aria-hidden
+        className="anim-drift absolute -left-32 -top-24 h-96 w-96 rounded-full bg-[radial-gradient(circle,rgba(27,110,245,.28),transparent_65%)] blur-2xl"
+      />
+      <div
+        aria-hidden
+        className="anim-drift absolute -right-28 top-56 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(139,92,246,.22),transparent_65%)] blur-2xl"
+      />
+
+      <header className="glass-strong sticky top-0 z-20 border-b border-slate-200/60 dark:border-slate-700/50">
+        <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-500 text-white shadow-lg shadow-brand-600/25">
+              <Icon icon="lucide:qr-code" className="h-4.5 w-4.5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">{branch.name}</div>
+              <div className="truncate text-[11px] text-slate-400 dark:text-slate-500">Operator paneli</div>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {/* Mən kiməm */}
-            {operators.length > 0 && (
+          <div className="flex shrink-0 items-center gap-1.5">
+            <span
+              className="glass flex items-center gap-1 rounded-xl px-2.5 py-1.5"
+              title="Gözləyən ziyarətçi sayı"
+            >
+              <Icon icon="lucide:users" className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
+              <span className="text-sm font-black tabular-nums text-brand-600 dark:text-brand-400">
+                {waitingCount}
+              </span>
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <main className="relative z-10 mx-auto max-w-lg space-y-4 px-4 py-6 sm:px-6">
+        {/* Hazırda çağırılan */}
+        <div className="rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-center text-white shadow-xl shadow-slate-900/20 dark:from-slate-800 dark:to-slate-900">
+          <div className="flex items-center justify-center gap-2 text-xs uppercase tracking-wider opacity-70">
+            <span className="anim-ping h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            Hazırda çağırılan
+          </div>
+          <div className="my-1.5 text-6xl font-black tabular-nums">{current?.code ?? '—'}</div>
+          <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm opacity-70">
+            {current?.visitor_name && (
+              <span className="inline-flex items-center gap-1">
+                <Icon icon="lucide:user" className="h-3.5 w-3.5" />
+                {current.visitor_name}
+              </span>
+            )}
+            {svcName(current?.service_id ?? null) && (
+              <span className="inline-flex items-center gap-1">
+                <Icon icon="lucide:briefcase" className="h-3.5 w-3.5" />
+                {svcName(current?.service_id ?? null)}
+              </span>
+            )}
+            {current?.operator_id && (
+              <span className="inline-flex items-center gap-1">
+                <Icon icon="lucide:headset" className="h-3.5 w-3.5" />
+                {opName(current.operator_id)}
+              </span>
+            )}
+            {!current && <span className="text-xs">Növbəti ziyarətçi gözlənir</span>}
+          </div>
+          {current && (
+            <button
+              onClick={() => openRedirect(current)}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-1.5 text-sm transition hover:bg-white/20"
+            >
+              <Icon icon="lucide:corner-up-right" className="h-4 w-4" />
+              Yönləndir
+            </button>
+          )}
+        </div>
+
+        {/* Əməliyyatlar */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Mən kiməm */}
+          {operators.length > 0 && (
+            <label className="glass glass-card col-span-2 flex flex-col gap-2 rounded-2xl px-4 py-3">
+              <span className="flex items-center gap-2.5">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand-600/10 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                  <Icon icon="lucide:user-round" className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 truncate text-sm font-semibold text-slate-600 dark:text-slate-300">
+                  Mən kiməm
+                </span>
+                <span className="ml-auto shrink-0 text-[11px] text-slate-400 dark:text-slate-500">
+                  çağırış sizə bağlanır
+                </span>
+              </span>
               <select
                 value={meId}
                 onChange={(e) => pickMe(e.target.value)}
-                className="rounded-xl border border-slate-200 dark:border-slate-800 px-2 py-1.5 text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:border-brand-500 max-w-[140px]"
-                title="Mən kiməm — çağırılan nömrə sizə bağlanır"
+                className="w-full rounded-xl border border-slate-200 bg-white/80 px-2.5 py-2.5 text-sm text-slate-800 outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                title="Çağırılan nömrə sizə bağlanır"
               >
                 <option value="">Operator seçin</option>
                 {operators.map((o) => (
@@ -166,100 +249,102 @@ export default function Operator() {
                   </option>
                 ))}
               </select>
-            )}
-            <div className="text-right">
-              <div className="text-xl font-black text-brand-600 tabular-nums leading-none">
-                {waitingCount}
-              </div>
-              <div className="text-[10px] text-slate-400 dark:text-slate-500">gözləyir</div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-lg mx-auto px-4 sm:px-6 py-6 space-y-5">
-        {/* Hazırda çağırılan */}
-        <div className="rounded-3xl bg-slate-900 text-white p-6 text-center">
-          <div className="text-sm opacity-70">Hazırda çağırılan</div>
-          <div className="text-6xl font-black tabular-nums my-1">{current?.code ?? '—'}</div>
-          <div className="text-sm opacity-70">
-            {current?.visitor_name ? `${current.visitor_name} • ` : ''}
-            {svcName(current?.service_id ?? null) ?? ''}
-            {current?.operator_id ? ` • ${opName(current.operator_id)}` : ''}
-          </div>
-          {current && (
-            <button
-              onClick={() => openRedirect(current)}
-              className="mt-3 rounded-full bg-white/10 hover:bg-white/20 px-4 py-1.5 text-sm transition inline-flex items-center gap-1.5"
-            >
-              <Icon icon="lucide:corner-up-right" className="w-4 h-4" />
-              Yönləndir
-            </button>
+            </label>
           )}
-        </div>
-
-        {/* Əməliyyatlar */}
-        <div className="grid grid-cols-2 gap-3">
           <button
             onClick={handleNext}
             disabled={busy}
-            className="col-span-2 rounded-2xl bg-brand-600 text-white text-xl font-bold py-5 hover:bg-brand-700 disabled:opacity-50 transition shadow-md flex items-center justify-center gap-2"
+            className="btn-primary col-span-2 flex items-center justify-center gap-2 rounded-2xl py-5 text-xl font-bold shadow-lg shadow-brand-600/25 disabled:opacity-50"
           >
-            <Icon icon="lucide:play" className="w-6 h-6" />
+            <Icon icon="lucide:play" className="h-6 w-6" />
             Növbəti
+            {waitingCount > 0 && (
+              <span className="rounded-full bg-white/20 px-2 py-0.5 text-sm tabular-nums">
+                {waitingCount}
+              </span>
+            )}
           </button>
           <button
             onClick={handleRecall}
             disabled={!current || busy}
-            className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 py-4 font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 flex items-center justify-center gap-2"
+            className="glass glass-card flex items-center justify-center gap-2 rounded-2xl py-4 font-semibold text-slate-700 transition hover:border-brand-500/40 disabled:opacity-40 dark:text-slate-200"
           >
-            <Icon icon="lucide:rotate-ccw" className="w-5 h-5" />
+            <Icon icon="lucide:rotate-ccw" className="h-5 w-5" />
             Geri çağır
           </button>
           <a
             href={`#/display/${branch.slug}`}
             target="_blank"
             rel="noreferrer"
-            className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 py-4 font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-center flex items-center justify-center gap-2"
+            className="glass glass-card flex items-center justify-center gap-2 rounded-2xl py-4 font-semibold text-slate-700 transition hover:border-brand-500/40 dark:text-slate-200"
           >
-            <Icon icon="lucide:monitor" className="w-5 h-5" />
+            <Icon icon="lucide:monitor" className="h-5 w-5" />
             Ekranı aç
           </a>
         </div>
 
-        {error && <div className="text-sm text-red-600 text-center">{error}</div>}
+        {error && (
+          <div className="flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2.5 text-sm font-medium text-red-600 dark:bg-red-500/10 dark:text-red-400">
+            <Icon icon="lucide:circle-alert" className="h-4 w-4 shrink-0" />
+            {error}
+          </div>
+        )}
 
         {/* Gözləyən siyahısı */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
-          <div className="px-4 py-3 text-sm font-semibold text-slate-600 dark:text-slate-300">
-            Gözləyənlər ({waiting.length})
+        <div className="glass glass-card overflow-hidden rounded-2xl">
+          <div className="flex items-center justify-between px-4 py-3">
+            <span className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
+              <Icon icon="lucide:list-ordered" className="h-4 w-4 text-brand-500" />
+              Gözləyənlər
+            </span>
+            <span className="rounded-full bg-brand-600/10 px-2.5 py-0.5 text-xs font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
+              {waiting.length}
+            </span>
           </div>
           {waiting.length === 0 && (
-            <div className="px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
-              Növbədə kimsə yoxdur
+            <div className="flex flex-col items-center px-4 pb-6 text-center">
+              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-600/10 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                <Icon icon="lucide:users" className="h-5 w-5" />
+              </span>
+              <div className="mt-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                Növbədə kimsə yoxdur
+              </div>
+              <div className="mt-1 max-w-[260px] text-xs text-slate-400 dark:text-slate-500">
+                Ziyarətçi QR-u skan edib nömrə alanda burada görünəcək
+              </div>
             </div>
           )}
-          {waiting.slice(0, 25).map((t, i) => (
-            <div key={t.id} className="px-4 py-3 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="text-xs text-slate-400 dark:text-slate-500 w-5 shrink-0">{i + 1}</span>
-                <span className="font-mono font-bold text-slate-800 dark:text-slate-100 shrink-0">{t.code}</span>
-                <div className="min-w-0 text-sm text-slate-500 dark:text-slate-400 truncate">
-                  {t.visitor_name ?? ''}
-                  {svcName(t.service_id) && (
-                    <span className="text-slate-400 dark:text-slate-500"> · {svcName(t.service_id)}</span>
-                  )}
+          <div className="divide-y divide-slate-100/80 dark:divide-slate-800/70">
+            {waiting.slice(0, 25).map((t, i) => (
+              <div key={t.id} className="flex items-center justify-between gap-2 px-4 py-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span
+                    className={`grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[10px] font-black ${
+                      i === 0
+                        ? 'bg-brand-600 text-white'
+                        : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
+                    }`}
+                  >
+                    {i + 1}
+                  </span>
+                  <span className="font-mono font-bold text-slate-800 dark:text-slate-100">{t.code}</span>
+                  <div className="min-w-0 truncate text-sm text-slate-500 dark:text-slate-400">
+                    {t.visitor_name ?? ''}
+                    {svcName(t.service_id) && (
+                      <span className="text-slate-400 dark:text-slate-500"> · {svcName(t.service_id)}</span>
+                    )}
+                  </div>
                 </div>
+                <button
+                  onClick={() => openRedirect(t)}
+                  className="shrink-0 rounded-lg border border-slate-200 px-2 py-1.5 text-slate-500 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-800 dark:text-slate-400"
+                  title="Digər xidmətə / əməkdaşa yönləndir"
+                >
+                  <Icon icon="lucide:arrow-right" className="h-4 w-4" />
+                </button>
               </div>
-              <button
-                onClick={() => openRedirect(t)}
-                className="shrink-0 text-xs rounded-lg border border-slate-200 dark:border-slate-800 px-2 py-1.5 text-slate-500 dark:text-slate-400 hover:border-brand-400 hover:text-brand-600"
-                title="Digər xidmətə / əməkdaşa yönləndir"
-              >
-                <Icon icon="lucide:arrow-right" className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </main>
 
@@ -270,12 +355,17 @@ export default function Operator() {
           onClick={() => setRedirectFor(null)}
         >
           <div
-            className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl"
+            className="glass glass-card w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div>
-              <div className="text-sm text-slate-400 dark:text-slate-500">Yönləndir</div>
-              <div className="text-2xl font-black text-slate-800 dark:text-slate-100">{redirectFor.code}</div>
+            <div className="flex items-center gap-3 rounded-xl bg-brand-600/10 px-3.5 py-3 dark:bg-brand-500/10">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-600 font-black text-white tabular-nums">
+                {redirectFor.code.split('-')[1]}
+              </span>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">{redirectFor.code}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Ziyarətçi nömrəsi</div>
+              </div>
             </div>
 
             {/* Xidmət seçimi */}

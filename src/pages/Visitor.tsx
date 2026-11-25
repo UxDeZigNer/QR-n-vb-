@@ -165,51 +165,89 @@ export default function Visitor() {
     : 0
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-50 to-white dark:from-slate-800 dark:to-slate-900">
-      <header className="px-6 py-5 flex items-center gap-3 border-b border-brand-100 bg-white/70 backdrop-blur">
-        <div className="w-9 h-9 rounded-xl bg-brand-600 grid place-items-center text-white font-bold">
-          {branch?.prefix}
-        </div>
-        <div>
-          <div className="font-semibold text-slate-800 dark:text-slate-100 leading-tight">{branch?.name}</div>
-          <div className="text-xs text-slate-500 dark:text-slate-400">{branch?.address ?? 'Növbə sistemi'}</div>
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-brand-50 to-white dark:from-slate-950 dark:to-slate-900">
+      {/* Fon — saytın ümumi naxışı */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-grid opacity-60" />
+      <div
+        aria-hidden
+        className="anim-drift absolute -right-24 -top-20 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(27,110,245,.25),transparent_65%)] blur-2xl"
+      />
+
+      <header className="glass-strong sticky top-0 z-20 border-b border-slate-200/60 dark:border-slate-700/50">
+        <div className="mx-auto flex max-w-md items-center gap-3 px-6 py-4">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-500 text-sm font-black text-white shadow-lg shadow-brand-600/25">
+            {branch?.prefix}
+          </div>
+          <div className="min-w-0">
+            <div className="truncate font-bold leading-tight text-slate-800 dark:text-slate-100">{branch?.name}</div>
+            <div className="truncate text-xs text-slate-400 dark:text-slate-500">
+              {branch?.address ?? 'Növbə sistemi'}
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-6 py-8">
+      <main className="relative z-10 mx-auto max-w-md space-y-5 px-6 py-8">
         {!myTicket ? (
           // ---- NÖVBƏYƏ QOŞUL ----
           <div className="space-y-5">
-            <div className="text-center">
-              <div className="text-5xl font-black text-brand-600 tabular-nums">
+            {/* Çağırılan nömrə */}
+            <div className="glass glass-card rounded-3xl p-6 text-center">
+              <div className="flex items-center justify-center gap-2 text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                <span className="anim-ping h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Hazırda çağırılan
+              </div>
+              <div className="mt-1 text-6xl font-black tabular-nums text-brand-600 dark:text-brand-400">
                 {currentCode ?? '—'}
               </div>
-              <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">Hazırda çağırılan nömrə</div>
-              <div className="mt-3 inline-flex items-center gap-2 text-sm bg-white dark:bg-slate-900 border border-brand-100 rounded-full px-3 py-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                Növbədə {waitingCount} nəfər gözləyir
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/80 px-3.5 py-1.5 text-sm font-medium text-slate-600 shadow-sm dark:bg-slate-900/70 dark:text-slate-300">
+                <Icon icon="lucide:users" className="h-4 w-4 text-brand-500" />
+                Növbədə <b className="tabular-nums">{waitingCount}</b> nəfər gözləyir
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-4">
-              <h2 className="font-semibold text-slate-800 dark:text-slate-100">Növbəyə qoşulun</h2>
+            {/* Qoşulma kartı */}
+            <div className="glass glass-card space-y-4 rounded-3xl p-5">
+              <div className="flex items-center gap-2.5">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-600/10 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                  <Icon icon="lucide:ticket" className="h-5 w-5" />
+                </span>
+                <div>
+                  <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">Növbəyə qoşulun</h2>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">Xidməti seçin, nömrəni alın</p>
+                </div>
+              </div>
 
               {services.length > 0 && (
                 <div>
-                  <label className="text-sm text-slate-600 dark:text-slate-300">Xidmət</label>
-                  <div className="grid grid-cols-2 gap-2 mt-1">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                    Xidmət
+                  </label>
+                  <div className="mt-1.5 grid grid-cols-2 gap-2">
                     {services.map((s) => (
                       <button
                         key={s.id}
                         onClick={() => setServiceId(s.id === serviceId ? '' : s.id)}
-                        className={`text-sm rounded-xl border px-3 py-2 text-left transition ${
+                        className={`rounded-xl border px-3 py-2.5 text-left transition ${
                           serviceId === s.id
-                            ? 'border-brand-600 bg-brand-50 dark:bg-slate-950 text-brand-700'
-                            : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300'
+                            ? 'border-brand-600 bg-brand-600 text-white shadow-md shadow-brand-600/20'
+                            : 'border-slate-200/80 bg-white/70 text-slate-700 hover:border-brand-400 dark:border-slate-700/60 dark:bg-slate-900/50 dark:text-slate-200'
                         }`}
                       >
-                        {s.name}
-                        <div className="text-xs text-slate-400 dark:text-slate-500">~{s.avg_minutes} dəq</div>
+                        <span className="flex items-center gap-1.5 text-sm font-semibold">
+                          <Icon
+                            icon="lucide:briefcase"
+                            className={`h-3.5 w-3.5 ${serviceId === s.id ? 'text-white' : 'text-brand-500'}`}
+                          />
+                          {s.name}
+                        </span>
+                        <span
+                          className={`mt-0.5 block text-xs ${
+                            serviceId === s.id ? 'text-white/75' : 'text-slate-400 dark:text-slate-500'
+                          }`}
+                        >
+                          ~{s.avg_minutes} dəq gözləmə
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -217,98 +255,181 @@ export default function Visitor() {
               )}
 
               <div>
-                <label className="text-sm text-slate-600 dark:text-slate-300">Adınız (istəyə bağlı)</label>
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Məsələn, Elvin"
-                  className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-3 py-2 outline-none focus:border-brand-500"
-                />
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                  Adınız (istəyə bağlı)
+                </label>
+                <div className="relative mt-1.5">
+                  <Icon
+                    icon="lucide:user"
+                    className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                  />
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Məsələn, Elvin"
+                    className="w-full rounded-xl border border-slate-200/80 bg-white/80 py-2.5 pl-9 pr-3 text-slate-800 outline-none transition focus:border-brand-500 dark:border-slate-700/60 dark:bg-slate-900/60 dark:text-slate-100"
+                  />
+                </div>
               </div>
 
-              {error && <div className="text-sm text-red-600">{error}</div>}
+              {error && (
+                <div className="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2.5 text-sm font-medium text-red-600 dark:bg-red-500/10 dark:text-red-400">
+                  <Icon icon="lucide:circle-alert" className="h-4 w-4 shrink-0" />
+                  {error}
+                </div>
+              )}
 
               <button
                 onClick={handleJoin}
                 disabled={joining}
-                className="w-full rounded-xl bg-brand-600 text-white font-semibold py-3 hover:bg-brand-700 disabled:opacity-50 transition"
+                className="btn-primary flex w-full items-center justify-center gap-2 rounded-xl py-3.5 font-bold shadow-lg shadow-brand-600/25 disabled:opacity-50"
               >
+                <Icon icon="lucide:qr-code" className="h-5 w-5" />
                 {joining ? 'Qoşulur…' : 'Nömrə al'}
               </button>
+              <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-400 dark:text-slate-500">
+                <Icon icon="lucide:smartphone" className="h-3.5 w-3.5" />
+                Nömrəniz bu cihazda saxlanılır — printer lazım deyil
+              </p>
             </div>
           </div>
         ) : (
           // ---- NÖMRƏM ----
           <div className="space-y-5">
+            {/* Nömrə kartı */}
             <div
-              className={`rounded-3xl p-8 text-center text-white shadow-lg transition ${
-                myTicket.status === 'waiting' ? 'bg-brand-600' : 'bg-emerald-600'
+              className={`relative overflow-hidden rounded-3xl p-8 text-center text-white shadow-xl transition ${
+                myTicket.status === 'waiting'
+                  ? 'bg-gradient-to-br from-brand-600 to-brand-500 shadow-brand-600/30'
+                  : 'bg-gradient-to-br from-emerald-600 to-emerald-500 shadow-emerald-600/30'
               }`}
             >
-              <div className="text-sm opacity-80">Sizin nömrəniz</div>
-              <div className="text-7xl font-black tabular-nums my-2">{myTicket.code}</div>
-              <div className="text-sm opacity-90">
-                {myTicket.status === 'waiting' && `Önünüzdə ${ahead} nəfər var`}
-                {(myTicket.status === 'called' || myTicket.status === 'serving') && (
+              <div className="flex items-center justify-center gap-2 text-xs uppercase tracking-wider opacity-80">
+                {myTicket.status === 'waiting' ? (
+                  <>
+                    <span className="anim-ping h-1.5 w-1.5 rounded-full bg-white" />
+                    Növbədəsiniz
+                  </>
+                ) : (
+                  <>
+                    <Icon icon="lucide:bell-ring" className="h-3.5 w-3.5" />
+                    Canlı status
+                  </>
+                )}
+              </div>
+              <div className="my-2 text-7xl font-black tabular-nums">{myTicket.code}</div>
+              <div className="flex flex-col items-center gap-1.5 text-sm opacity-90">
+                {myTicket.status === 'waiting' && (
                   <span className="inline-flex items-center gap-1.5">
-                    <Icon icon="lucide:bell-ring" className="w-4 h-4" />
-                    Siz çağırılırsınız!
+                    <Icon icon="lucide:users" className="h-4 w-4" />
+                    Önünüzdə <b>{ahead}</b> nəfər var
+                  </span>
+                )}
+                {(myTicket.status === 'called' || myTicket.status === 'serving') && (
+                  <span className="inline-flex items-center gap-1.5 font-semibold">
+                    <Icon icon="lucide:bell-ring" className="h-4 w-4" />
+                    Ziyarətçi, siz çağırılırsınız!
                   </span>
                 )}
                 {myTicket.status === 'done' && (
                   <span className="inline-flex items-center gap-1.5">
-                    <Icon icon="lucide:check" className="w-4 h-4" />
+                    <Icon icon="lucide:check-circle-2" className="h-4 w-4" />
                     Xidmətiniz tamamlandı
                   </span>
                 )}
-                {myTicket.status === 'skipped' && 'Nömrəniz buraxıldı'}
+                {myTicket.status === 'skipped' && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Icon icon="lucide:x-circle" className="h-4 w-4" />
+                    Nömrəniz buraxıldı
+                  </span>
+                )}
               </div>
               {activeService && (
-                <div className="mt-2 inline-block rounded-full bg-white/20 px-3 py-1 text-sm">
-                  Xidmət: {activeService.name}
+                <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-1.5 text-sm font-medium">
+                  <Icon icon="lucide:briefcase" className="h-3.5 w-3.5" />
+                  {activeService.name}
                 </div>
               )}
             </div>
 
+            {/* Təxmini gözləmə */}
             {myTicket.status === 'waiting' && (
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 text-center">
-                <div className="text-sm text-slate-500 dark:text-slate-400">Təxmini gözləmə</div>
-                <div className="text-3xl font-bold text-slate-800 dark:text-slate-100">
-                  ~{estimateMinutes(ahead, activeService?.avg_minutes ?? 5)} dəq
+              <div className="glass glass-card flex items-center gap-4 rounded-2xl p-5">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand-600/10 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                  <Icon icon="lucide:clock" className="h-6 w-6" />
+                </span>
+                <div>
+                  <div className="text-xs text-slate-400 dark:text-slate-500">Təxmini gözləmə</div>
+                  <div className="text-2xl font-black tabular-nums text-slate-800 dark:text-slate-100">
+                    ~{estimateMinutes(ahead, activeService?.avg_minutes ?? 5)} dəq
+                  </div>
+                </div>
+                <div className="ml-auto text-right text-[11px] leading-tight text-slate-400 dark:text-slate-500">
+                  Xidmətin orta
+                  <br />
+                  vaxtına görə
                 </div>
               </div>
             )}
 
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500 dark:text-slate-400">Hazırda çağırılan</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-100 tabular-nums">{currentCode ?? '—'}</span>
-              </div>
-              <div className="flex justify-between text-sm mt-2">
-                <span className="text-slate-500 dark:text-slate-400">Növbədə gözləyən</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-100">{waitingCount} nəfər</span>
-              </div>
-              <div className="flex justify-between text-sm mt-2">
-                <span className="text-slate-500 dark:text-slate-400">Növbə statusu</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-100">
-                  {myTicket.status === 'waiting' && 'Gözləyir…'}
-                  {myTicket.status === 'called' && 'Çağırıldı'}
-                  {myTicket.status === 'serving' && 'Xidmət göstərilir'}
-                  {myTicket.status === 'done' && 'Tamamlandı'}
-                  {myTicket.status === 'skipped' && 'Buraxıldı'}
-                </span>
-              </div>
+            {/* Status məlumatları */}
+            <div className="glass glass-card divide-y divide-slate-100/80 overflow-hidden rounded-2xl dark:divide-slate-800/70">
+              <InfoRow icon="lucide:bell-ring" label="Hazırda çağırılan" value={currentCode ?? '—'} mono />
+              <InfoRow icon="lucide:users" label="Növbədə gözləyən" value={`${waitingCount} nəfər`} />
+              <InfoRow
+                icon="lucide:activity"
+                label="Növbə statusu"
+                value={
+                  myTicket.status === 'waiting'
+                    ? 'Gözləyir…'
+                    : myTicket.status === 'called'
+                      ? 'Çağırıldı'
+                      : myTicket.status === 'serving'
+                        ? 'Xidmət göstərilir'
+                        : myTicket.status === 'done'
+                          ? 'Tamamlandı'
+                          : 'Buraxıldı'
+                }
+              />
             </div>
 
             <button
               onClick={leaveQueue}
-              className="w-full text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 py-2"
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm text-slate-400 transition hover:text-red-500 dark:text-slate-500"
             >
+              <Icon icon="lucide:log-out" className="h-4 w-4" />
               Növbəni tərk et
             </button>
           </div>
         )}
       </main>
+    </div>
+  )
+}
+
+/** Status sətiri — icon + etiket + dəyər */
+function InfoRow({
+  icon,
+  label,
+  value,
+  mono,
+}: {
+  icon: string
+  label: string
+  value: string
+  mono?: boolean
+}) {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3.5">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand-600/10 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+        <Icon icon={icon} className="h-4 w-4" />
+      </span>
+      <span className="text-sm text-slate-500 dark:text-slate-400">{label}</span>
+      <span
+        className={`ml-auto text-sm font-bold text-slate-800 dark:text-slate-100 ${mono ? 'tabular-nums' : ''}`}
+      >
+        {value}
+      </span>
     </div>
   )
 }
