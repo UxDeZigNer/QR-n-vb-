@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Icon } from '@iconify/react'
 import QRCode from 'qrcode'
 import { supabase } from '../lib/supabase'
-import { subscribeBranch } from '../lib/queue'
+import { finishTicket, getCurrent, subscribeBranch } from '../lib/queue'
 import { getStoredTheme, toggleTheme, type Theme } from '../lib/theme'
 import type { Branch, BranchLive, Operator, Service, Ticket } from '../lib/types'
 
@@ -247,6 +247,20 @@ export default function Dashboard() {
     if (!selected) return
     return subscribeBranch(selected.id, () => void loadDetail(selected))
   }, [selected, loadDetail])
+
+  // Çağırılmış biletin xidmətini tamamla (widget-dakı ✓ düyməsi)
+  async function finishCurrent() {
+    if (!selected || !live?.current_code) return
+    try {
+      const cur = await getCurrent(selected.id)
+      if (cur) {
+        await finishTicket(cur.id)
+        await loadDetail(selected)
+      }
+    } catch {
+      /* RLS icazə verməsə — səssiz; panel tərəfində işləyəcək */
+    }
+  }
 
   // Ziyarətçi tarixçəsi
   useEffect(() => {
@@ -829,6 +843,17 @@ export default function Dashboard() {
             icon="lucide:bell-ring"
             hint={live?.current_code ? 'Növbədəki ziyarətçi' : 'Çağırış olanda görünəcək'}
             accent
+            action={
+              live?.current_code ? (
+                <button
+                  onClick={finishCurrent}
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-white/15 py-1.5 text-xs font-bold text-white transition hover:bg-white/25"
+                >
+                  <Icon icon="lucide:check" className="h-3.5 w-3.5" />
+                  Xidmət tamam
+                </button>
+              ) : undefined
+            }
           />
           <StatCard
             label="Gözləyən"
@@ -1474,12 +1499,14 @@ function StatCard({
   icon,
   hint,
   accent,
+  action,
 }: {
   label: string
   value: string
   icon?: string
   hint?: string
   accent?: boolean
+  action?: React.ReactNode
 }) {
   return (
     <div
@@ -1513,6 +1540,7 @@ function StatCard({
           {hint}
         </div>
       )}
+      {action}
     </div>
   )
 }

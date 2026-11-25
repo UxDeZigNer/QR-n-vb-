@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react'
 import { useParams } from 'react-router-dom'
 import {
   callNext,
+  finishTicket,
   getCurrent,
   getLive,
   getOperators,
@@ -95,6 +96,20 @@ export default function Operator() {
     try {
       await recallTicket(current.id)
       if (branch) await refresh(branch.id)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleFinish() {
+    if (!current || busy) return
+    setBusy(true)
+    setError(null)
+    try {
+      await finishTicket(current.id)
+      if (branch) await refresh(branch.id)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Bitirmək mümkün olmadı')
     } finally {
       setBusy(false)
     }
@@ -210,13 +225,23 @@ export default function Operator() {
             {!current && <span className="text-xs">Növbəti ziyarətçi gözlənir</span>}
           </div>
           {current && (
-            <button
-              onClick={() => openRedirect(current)}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-1.5 text-sm transition hover:bg-white/20"
-            >
-              <Icon icon="lucide:corner-up-right" className="h-4 w-4" />
-              Yönləndir
-            </button>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              <button
+                onClick={handleFinish}
+                disabled={busy}
+                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-4 py-1.5 text-sm font-semibold transition hover:bg-emerald-600 disabled:opacity-50"
+              >
+                <Icon icon="lucide:check" className="h-4 w-4" />
+                Xidmət tamam
+              </button>
+              <button
+                onClick={() => openRedirect(current)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-1.5 text-sm transition hover:bg-white/20"
+              >
+                <Icon icon="lucide:corner-up-right" className="h-4 w-4" />
+                Yönləndir
+              </button>
+            </div>
           )}
         </div>
 

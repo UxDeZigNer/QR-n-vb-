@@ -38,6 +38,23 @@ export async function recallTicket(ticketId: string): Promise<Ticket> {
   return data as Ticket
 }
 
+/**
+ * Çağırılmış biletin xidmətini tamamla (status → done).
+ * 1) `finish_ticket` RPC (DB-də varsa — hər kəs üçün işləyir)
+ * 2) fallback: birbaşa update — RLS org sahibinə icazə verir
+ */
+export async function finishTicket(ticketId: string): Promise<void> {
+  const { error } = await supabase.rpc('finish_ticket', { p_ticket_id: ticketId })
+  if (!error) return
+  // RPC yoxdur / xəta → RLS ilə birbaşa update
+  const { error: upd } = await supabase
+    .from('tickets')
+    .update({ status: 'done', done_at: new Date().toISOString() })
+    .eq('id', ticketId)
+    .in('status', ['called', 'serving'])
+  if (upd) throw new Error(upd.message)
+}
+
 /** Nömrəni xidmətə / əməkdaşa yönləndir */
 export async function redirectTicket(opts: {
   ticketId: string
