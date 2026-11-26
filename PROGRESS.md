@@ -3,9 +3,13 @@
 > İndiyə qədər görülən iş, cari mərhələ, dəyişdirilmiş fayllar, növbəti addımlar.
 > Hər əsas tapşırıqdan sonra yenilə. Arxitektura → `MASTER.md` · Tarixçə → `SESSION_LOG.md`
 
-## Cari vəziyyət (2026-11-25)
-- **Son commit:** `d91e705` → Actions #34 **success** → FTP-də: `index-51OIKUCy.js` (CDN hələ köhnə `index-Qy9jsWAF.js` verir — cache yenilənməyi gözlənilir)
-- **Mərhələ:** QR ilk açılış bypass (`history.back()`) deploy olundu. Canlı test CDN cache-dən asılıdır — bundle yenilənəndə təmiz profil ilə test olunacaq. Rəy gözlənilir.
+## Cari vəziyyət (2026-11-26)
+- **Son commit:** `96c2ebf` → Actions #35 **success** (yalnız `PROGRESS.md` — kod dəyişməyib)
+- **Mərhələ:** Yeni iş yoxdur — Demo panel (`e6afa7b`) + bütün sonrakı commit-lər canlıda. İstifadəçi rəyi gözlənilir.
+
+### 2026-11-26
+- Sessiya yoxlama sessiyası idi: `MASTER.md` + `PROGRESS.md` oxundu, Demo panel işi (`e6afa7b`, Actions #28) təsdiqləndi — canlıda, kod dəyişikliyi olmadı.
+- `PROGRESS.md` commit olunmamış dəyişikliyi saxlanıldı → `96c2ebf` (Actions #35 ✓).
 
 ### 2026-11-25
 - **Commit `d91e705` (Actions #34 ✓)** — **QR ilk açılış problemi:** InfinityFree bot-challenge ilk açılışda `location.href="/?i=1"` edib hash-i (`#/q/slug`) itirir → Landing açılır. Həll: `main.tsx`-də bypass — `?i=1` + hash yox → `history.back()` (cookie challenge-dan sonra qoyulub, əvvəlki URL QR səhifəsidir → düzgün load olunur). Challenge free hesabda mandatory, söndürülmür.
