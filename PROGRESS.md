@@ -4,12 +4,21 @@
 > Hər əsas tapşırıqdan sonra yenilə. Arxitektura → `MASTER.md` · Tarixçə → `SESSION_LOG.md`
 
 ## Cari vəziyyət (2026-11-26)
-- **Son commit:** `96c2ebf` → Actions #35 **success** (yalnız `PROGRESS.md` — kod dəyişməyib)
-- **Mərhələ:** Yeni iş yoxdur — Demo panel (`e6afa7b`) + bütün sonrakı commit-lər canlıda. İstifadəçi rəyi gözlənilir.
+- **Son commit:** `96c2ebf` → Actions #35 **success** (kod dəyişməyib)
+- **Hazırda:** `main.tsx`-də QR ilk açılış bypass-ı yenilənib (aşağıda), **build ✓** (`tsc` + `vite build` + `oxlint` — köhnə warning-lər normal). **Commit/PUSH OLUNMAYIB** + headless Chrome canlı testi arxa planda gedir → nəticədən sonra commit + push.
 
-### 2026-11-26
-- Sessiya yoxlama sessiyası idi: `MASTER.md` + `PROGRESS.md` oxundu, Demo panel işi (`e6afa7b`, Actions #28) təsdiqləndi — canlıda, kod dəyişikliyi olmadı.
-- `PROGRESS.md` commit olunmamış dəyişikliyi saxlanıldı → `96c2ebf` (Actions #35 ✓).
+### 2026-11-26 (yeni — QR ilk açılış bypass-ı v2, COMMIT GÖZLƏYİR)
+- **Problem:** 25.11 bypass-ı (`d91e705`) işləmir — istifadəçi hələ də ilk açılışda QR səhifəsinin açılmadığını deyir.
+- **Səbəblər (2 zəiflik `src/main.tsx`):**
+  1. `history.length > 1` guard — bəzi skaner/in-app WebView-lərdə (WhatsApp, Instagram, kamera) `history.length` həmişə `1` göstərir → `history.back()` **heç çağırılmırdı**
+  2. Back() module top-level sync çağırılırdı → bəzi brauzerlərdə load zamanı navigation **ignored** olunur
+- **Yeni həll (`src/main.tsx`, build ✓):**
+  - Guard çıxarıldı (back() length==1 olsa zərərsizdir)
+  - `setTimeout(qrBypass, 0)` — sync script execution-dan növbəti task-a keçir
+  - Retry: 500ms × 5 (hələ də `?i=1` + hash yoxdursa yenidən `history.back()`)
+  - **4s loop-guard** (`sessionStorage` `qr_i1_last_attempt`): challenge cookie-ni qəbul etməyib yenidən `/?i=1` qaytarsa sonsuz back() döngəsi olmasın
+- **Diaqnoz məlumatı:** challenge JS **şərtsiz** `location.href="https://qr.free.je/?i=1"` edir (AES-128-CTR, `__test` cookie, path=/); server `Cache-Control: no-cache` → back() serverə yenidən gedir, cookie ilə real HTML qaytarır. `document.referrer` fragment saxlamır (test olundu) → fallback kimi yararsız, yeganə yol `history.back()`dir.
+- **Növbəti addım:** headless Chrome test nəticəsi → commit + push + Actions + canlı yoxlama → sonra PROGRESS yenilə.
 
 ### 2026-11-25
 - **Commit `d91e705` (Actions #34 ✓)** — **QR ilk açılış problemi:** InfinityFree bot-challenge ilk açılışda `location.href="/?i=1"` edib hash-i (`#/q/slug`) itirir → Landing açılır. Həll: `main.tsx`-də bypass — `?i=1` + hash yox → `history.back()` (cookie challenge-dan sonra qoyulub, əvvəlki URL QR səhifəsidir → düzgün load olunur). Challenge free hesabda mandatory, söndürülmür.
