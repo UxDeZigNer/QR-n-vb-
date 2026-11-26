@@ -4,10 +4,11 @@
 > Hər əsas tapşırıqdan sonra yenilə. Arxitektura → `MASTER.md` · Tarixçə → `SESSION_LOG.md`
 
 ## Cari vəziyyət (2026-11-25)
-- **Son commit:** `b66fb26` → Actions #30 **success** → canlı: `index-CUCw6fIw.js` (hər iki sayt)
-- **Mərhələ:** Operator paneli (`#/panel/:slug`) + Skan səhifəsi (`#/q/:slug`) glass tərzdə yeniləndi və canlıda təsdiqləndi. Rəy gözlənilir.
+- **Son commit:** `d91e705` → Actions #34 **success** → FTP-də: `index-51OIKUCy.js` (CDN hələ köhnə `index-Qy9jsWAF.js` verir — cache yenilənməyi gözlənilir)
+- **Mərhələ:** QR ilk açılış bypass (`history.back()`) deploy olundu. Canlı test CDN cache-dən asılıdır — bundle yenilənəndə təmiz profil ilə test olunacaq. Rəy gözlənilir.
 
 ### 2026-11-25
+- **Commit `d91e705` (Actions #34 ✓)** — **QR ilk açılış problemi:** InfinityFree bot-challenge ilk açılışda `location.href="/?i=1"` edib hash-i (`#/q/slug`) itirir → Landing açılır. Həll: `main.tsx`-də bypass — `?i=1` + hash yox → `history.back()` (cookie challenge-dan sonra qoyulub, əvvəlki URL QR səhifəsidir → düzgün load olunur). Challenge free hesabda mandatory, söndürülmür.
 - **Commit `82596cc` (Actions #31 ✓)** — Selectlərə sağ padding (arrow küncə yapışmırdı): Operator "Mən kiməm" select + Dashboard filial select → `pr-9`.
 - **Commit `abd519b` (Actions #32 ✓) + `0c685eb` (#33, retry)** — **Bitməmiş bilet problemi:** A-1 `called`-da qalırdı (gözləyən yox olanda `call_next` exception + rollback). Həll:
   - **"Xidmət tamam ✓" düyməsi** — Operator paneli çağırılan kartında (yaşıl, canlıda təsdiqləndi ✓) + Dashboard "Hazırda çağırılan" widget-ında
