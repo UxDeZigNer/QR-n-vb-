@@ -21,6 +21,8 @@ lerna-debug.log*
 
 # Sessiya qeydləri — gizli token-lər var, repoya düşməməlidir
 SESSION_LOG.md
+session-*.md
+supabase/.temp/
 
 # Editor
 .vscode/*
