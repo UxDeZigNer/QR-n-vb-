@@ -4,21 +4,23 @@
 > Hər əsas tapşırıqdan sonra yenilə. Arxitektura → `MASTER.md` · Tarixçə → `SESSION_LOG.md`
 
 ## Cari vəziyyət (2026-11-26)
-- **Son commit:** `96c2ebf` → Actions #35 **success** (kod dəyişməyib)
-- **Hazırda:** `main.tsx`-də QR ilk açılış bypass-ı yenilənib (aşağıda), **build ✓** (`tsc` + `vite build` + `oxlint` — köhnə warning-lər normal). **Commit/PUSH OLUNMAYIB** + headless Chrome canlı testi arxa planda gedir → nəticədən sonra commit + push.
+- **Son commit:** `266f0f0` → Actions #37 **success** (build ✓ + deploy ✓ + deploy-ftp ✓) — **QR ilk açılış bypass v2 canlıda**
+- **Canlı təsdiq:** challenge keçildi (Node vm → `__test` cookie) → `qr.free.je` real bundle `index-ox_JbiIG.js` → içində `qr_i1_last_attempt` (yeni bypass) ✓ · GH Pages eyni bundle ✓
+- **Mərhələ:** Bypass v2 canlıda — istifadəçi real telefonda (təmiz cookie ilə) QR ilk açılışını test etməlidir.
 
-### 2026-11-26 (yeni — QR ilk açılış bypass-ı v2, COMMIT GÖZLƏYİR)
-- **Problem:** 25.11 bypass-ı (`d91e705`) işləmir — istifadəçi hələ də ilk açılışda QR səhifəsinin açılmadığını deyir.
+### 2026-11-26 (yeni — QR ilk açılış bypass-ı v2 → `266f0f0`, Actions #37 ✓, CANLIDA)
+- **Problem:** 25.11 bypass-ı (`d91e705`) işləmirdi — istifadəçi hələ də ilk açılışda QR səhifəsinin açılmadığını deyirdi.
 - **Səbəblər (2 zəiflik `src/main.tsx`):**
   1. `history.length > 1` guard — bəzi skaner/in-app WebView-lərdə (WhatsApp, Instagram, kamera) `history.length` həmişə `1` göstərir → `history.back()` **heç çağırılmırdı**
   2. Back() module top-level sync çağırılırdı → bəzi brauzerlərdə load zamanı navigation **ignored** olunur
-- **Yeni həll (`src/main.tsx`, build ✓):**
+- **Yeni həll (`src/main.tsx`):**
   - Guard çıxarıldı (back() length==1 olsa zərərsizdir)
   - `setTimeout(qrBypass, 0)` — sync script execution-dan növbəti task-a keçir
   - Retry: 500ms × 5 (hələ də `?i=1` + hash yoxdursa yenidən `history.back()`)
   - **4s loop-guard** (`sessionStorage` `qr_i1_last_attempt`): challenge cookie-ni qəbul etməyib yenidən `/?i=1` qaytarsa sonsuz back() döngəsi olmasın
-- **Diaqnoz məlumatı:** challenge JS **şərtsiz** `location.href="https://qr.free.je/?i=1"` edir (AES-128-CTR, `__test` cookie, path=/); server `Cache-Control: no-cache` → back() serverə yenidən gedir, cookie ilə real HTML qaytarır. `document.referrer` fragment saxlamır (test olundu) → fallback kimi yararsız, yeganə yol `history.back()`dir.
-- **Növbəti addım:** headless Chrome test nəticəsi → commit + push + Actions + canlı yoxlama → sonra PROGRESS yenilə.
+- **Diaqnoz məlumatı:** challenge JS **şərtsiz** `location.href="https://qr.free.je/?i=1"` edir (AES-128-CTR, `__test` cookie, path=/, 6h); server `Cache-Control: no-cache` → back() serverə yenidən gedir, cookie ilə real HTML qaytarır. `document.referrer` fragment saxlamır (test olundu) → fallback kimi yararsız, yeganə yol `history.back()`dir.
+- **Yoxlama:** `tsc`+`vite build`+`oxlint` ✓ (köhnə warning-lər normal) · Actions #37 build/deploy/deploy-ftp **success** · canlıda challenge keçilib bundle `index-ox_JbiIG.js` + yeni kod ✓
+- **Növbəti addım:** İstifadəçi real telefonda test (kameradan skan, cookie/süstgecn silməklə) → işləsə bağlanır, işləməsə: bfcache variantı → `.htaccess`-lə `Cache-Control: no-store` sınanacaq (challenge header-larına təsiri yoxlanılacaq).
 
 ### 2026-11-25
 - **Commit `d91e705` (Actions #34 ✓)** — **QR ilk açılış problemi:** InfinityFree bot-challenge ilk açılışda `location.href="/?i=1"` edib hash-i (`#/q/slug`) itirir → Landing açılır. Həll: `main.tsx`-də bypass — `?i=1` + hash yox → `history.back()` (cookie challenge-dan sonra qoyulub, əvvəlki URL QR səhifəsidir → düzgün load olunur). Challenge free hesabda mandatory, söndürülmür.
